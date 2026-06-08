@@ -9,6 +9,9 @@
 :root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#c9d1d9;--accent:#58a6ff;--green:#3fb950;--purple:#bc8cff;--yellow:#d29922;--red:#f85149;--orange:#f0883e}
 body{font-family:'Cascadia Code','Fira Code','JetBrains Mono',monospace;background:var(--bg);color:var(--text);min-height:100vh}
 .container{max-width:1200px;margin:0 auto;padding:20px}
+.lang-switch{position:fixed;top:16px;right:16px;z-index:100;display:flex;gap:0;border-radius:6px;overflow:hidden;border:1px solid var(--border)}
+.lang-switch button{padding:6px 14px;border:none;background:var(--card);color:#8b949e;font-family:inherit;font-size:12px;cursor:pointer;transition:all .2s}
+.lang-switch button.active{background:var(--accent);color:#fff}
 header{text-align:center;padding:60px 0 40px}
 header h1{font-size:36px;background:linear-gradient(135deg,#58a6ff,#bc8cff,#3fb950);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:12px}
 header .subtitle{color:#8b949e;font-size:16px;margin-bottom:20px}
@@ -60,23 +63,28 @@ footer a{color:var(--accent);text-decoration:none}
 </style>
 </head>
 <body>
+<div class="lang-switch">
+<button onclick="setLang('zh')" id="btn-zh" class="active">中文</button>
+<button onclick="setLang('en')" id="btn-en">EN</button>
+</div>
+
 <div class="container">
 <header>
-<h1>C/C++ Systems Portfolio</h1>
-<p class="subtitle">Four interactive projects compiled to WebAssembly — click to run in your browser</p>
+<h1 data-zh="C/C++ 系统编程作品集" data-en="C/C++ Systems Portfolio">C/C++ 系统编程作品集</h1>
+<p class="subtitle" data-zh="四个交互式项目，编译为 WebAssembly — 点击即可在浏览器中运行" data-en="Four interactive projects compiled to WebAssembly — click to run in your browser">四个交互式项目，编译为 WebAssembly — 点击即可在浏览器中运行</p>
 <div class="badges">
 <span class="badge badge-c">C/C++</span>
 <span class="badge badge-wasm">WebAssembly</span>
-<span class="badge badge-sys">Systems Programming</span>
-<span class="badge badge-perf">Performance</span>
+<span class="badge badge-sys" data-zh="系统编程" data-en="Systems Programming">系统编程</span>
+<span class="badge badge-perf" data-zh="高性能" data-en="Performance">高性能</span>
 </div>
 </header>
 
 <div class="stats">
-<div class="stat"><div class="val">4</div><div class="label">Projects</div></div>
-<div class="stat"><div class="val">3000+</div><div class="label">Lines of C</div></div>
-<div class="stat"><div class="val">6</div><div class="label">C/WASM Modules</div></div>
-<div class="stat"><div class="val">100%</div><div class="label">Browser Interactive</div></div>
+<div class="stat"><div class="val">4</div><div class="label" data-zh="项目" data-en="Projects">项目</div></div>
+<div class="stat"><div class="val">3000+</div><div class="label" data-zh="行 C 代码" data-en="Lines of C">行 C 代码</div></div>
+<div class="stat"><div class="val">6</div><div class="label" data-zh="C/WASM 模块" data-en="C/WASM Modules">C/WASM 模块</div></div>
+<div class="stat"><div class="val">100%</div><div class="label" data-zh="浏览器可交互" data-en="Browser Interactive">浏览器可交互</div></div>
 </div>
 
 <div class="grid">
@@ -84,23 +92,23 @@ footer a{color:var(--accent);text-decoration:none}
 <div class="project-header">
 <div class="project-icon icon-dsl">⟨⟩</div>
 <div>
-<div class="project-title">Relational DSL Interpreter</div>
-<div class="project-subtitle">Compiler · Database · Language Design</div>
+<div class="project-title" data-zh="关系型 DSL 解释器" data-en="Relational DSL Interpreter">关系型 DSL 解释器</div>
+<div class="project-subtitle" data-zh="编译器 · 数据库 · 语言设计" data-en="Compiler · Database · Language Design">编译器 · 数据库 · 语言设计</div>
 </div>
 </div>
 <div class="project-body">
-<div class="project-desc">A mini declarative language for data analysis. Complete implementation of lexer, recursive descent parser, relational algebra execution engine, and CSV backend storage — all in C.</div>
+<div class="project-desc" data-zh="面向数据分析的微型声明式语言。完整实现词法分析器、递归下降解析器、关系代数执行引擎和 CSV 后端存储——全部用 C 编写。" data-en="A mini declarative language for data analysis. Complete implementation of lexer, recursive descent parser, relational algebra execution engine, and CSV backend storage — all in C.">面向数据分析的微型声明式语言。完整实现词法分析器、递归下降解析器、关系代数执行引擎和 CSV 后端存储——全部用 C 编写。</div>
 <div class="project-tags">
-<span class="tag">Lexer</span>
-<span class="tag">Parser</span>
+<span class="tag" data-zh="词法分析" data-en="Lexer">词法分析</span>
+<span class="tag" data-zh="语法分析" data-en="Parser">语法分析</span>
 <span class="tag">AST</span>
-<span class="tag">SQL-like</span>
-<span class="tag">Relational Algebra</span>
+<span class="tag" data-zh="类SQL" data-en="SQL-like">类SQL</span>
+<span class="tag" data-zh="关系代数" data-en="Relational Algebra">关系代数</span>
 </div>
 </div>
 <div class="project-footer">
 <span>SELECT · FROM · WHERE · ORDER BY · GROUP BY</span>
-<span class="run">▶ Click to Run</span>
+<span class="run" data-zh="▶ 点击运行" data-en="▶ Click to Run">▶ 点击运行</span>
 </div>
 </a>
 
@@ -108,23 +116,23 @@ footer a{color:var(--accent);text-decoration:none}
 <div class="project-header">
 <div class="project-icon icon-gc">♻</div>
 <div>
-<div class="project-title">Mark-Sweep GC Visualizer</div>
-<div class="project-subtitle">Garbage Collection · Memory · Visualization</div>
+<div class="project-title" data-zh="标记-清除 GC 可视化调试器" data-en="Mark-Sweep GC Visualizer">标记-清除 GC 可视化调试器</div>
+<div class="project-subtitle" data-zh="垃圾回收 · 内存管理 · 可视化" data-en="Garbage Collection · Memory · Visualization">垃圾回收 · 内存管理 · 可视化</div>
 </div>
 </div>
 <div class="project-body">
-<div class="project-desc">Interactive garbage collector debugger with real-time heap visualization. Watch allocation, marking (white→gray→black), and sweeping phases. Supports object graphs, circular references, and root management.</div>
+<div class="project-desc" data-zh="交互式垃圾回收调试器，支持实时堆内存可视化。观察分配、标记（白→灰→黑）和清除阶段。支持对象图、循环引用和根管理。" data-en="Interactive garbage collector debugger with real-time heap visualization. Watch allocation, marking (white→gray→black), and sweeping phases. Supports object graphs, circular references, and root management.">交互式垃圾回收调试器，支持实时堆内存可视化。观察分配、标记（白→灰→黑）和清除阶段。支持对象图、循环引用和根管理。</div>
 <div class="project-tags">
-<span class="tag">Mark-Sweep</span>
-<span class="tag">Tri-color</span>
-<span class="tag">Heap Viz</span>
+<span class="tag" data-zh="标记-清除" data-en="Mark-Sweep">标记-清除</span>
+<span class="tag" data-zh="三色标记" data-en="Tri-color">三色标记</span>
+<span class="tag" data-zh="堆可视化" data-en="Heap Viz">堆可视化</span>
 <span class="tag">GC Roots</span>
-<span class="tag">Fragmentation</span>
+<span class="tag" data-zh="内存碎片" data-en="Fragmentation">内存碎片</span>
 </div>
 </div>
 <div class="project-footer">
-<span>Allocation · Marking · Sweeping · Compaction</span>
-<span class="run">▶ Click to Run</span>
+<span data-zh="分配 · 标记 · 清除 · 压缩" data-en="Allocation · Marking · Sweeping · Compaction">分配 · 标记 · 清除 · 压缩</span>
+<span class="run" data-zh="▶ 点击运行" data-en="▶ Click to Run">▶ 点击运行</span>
 </div>
 </a>
 
@@ -132,23 +140,23 @@ footer a{color:var(--accent);text-decoration:none}
 <div class="project-header">
 <div class="project-icon icon-review">🔍</div>
 <div>
-<div class="project-title">AI Code Reviewer</div>
-<div class="project-subtitle">Static Analysis · Security · Pattern Matching</div>
+<div class="project-title" data-zh="AI 辅助代码审查工具" data-en="AI Code Reviewer">AI 辅助代码审查工具</div>
+<div class="project-subtitle" data-zh="静态分析 · 安全审计 · 模式匹配" data-en="Static Analysis · Security · Pattern Matching">静态分析 · 安全审计 · 模式匹配</div>
 </div>
 </div>
 <div class="project-body">
-<div class="project-desc">Terminal-based code review engine that analyzes git diffs for security vulnerabilities, memory leaks, style issues, and performance problems. Features context window management and severity scoring.</div>
+<div class="project-desc" data-zh="终端代码审查引擎，分析 git diff 中的安全漏洞、内存泄漏、代码风格和性能问题。支持上下文窗口管理和严重性评分。" data-en="Terminal-based code review engine that analyzes git diffs for security vulnerabilities, memory leaks, style issues, and performance problems. Features context window management and severity scoring.">终端代码审查引擎，分析 git diff 中的安全漏洞、内存泄漏、代码风格和性能问题。支持上下文窗口管理和严重性评分。</div>
 <div class="project-tags">
-<span class="tag">Diff Parser</span>
-<span class="tag">Pattern Engine</span>
-<span class="tag">Security</span>
-<span class="tag">Memory Safety</span>
-<span class="tag">Scoring</span>
+<span class="tag" data-zh="Diff 解析" data-en="Diff Parser">Diff 解析</span>
+<span class="tag" data-zh="模式引擎" data-en="Pattern Engine">模式引擎</span>
+<span class="tag" data-zh="安全" data-en="Security">安全</span>
+<span class="tag" data-zh="内存安全" data-en="Memory Safety">内存安全</span>
+<span class="tag" data-zh="评分" data-en="Scoring">评分</span>
 </div>
 </div>
 <div class="project-footer">
-<span>strcpy · malloc · gets · sprintf · goto detection</span>
-<span class="run">▶ Click to Run</span>
+<span>strcpy · malloc · gets · sprintf · goto</span>
+<span class="run" data-zh="▶ 点击运行" data-en="▶ Click to Run">▶ 点击运行</span>
 </div>
 </a>
 
@@ -156,69 +164,84 @@ footer a{color:var(--accent);text-decoration:none}
 <div class="project-header">
 <div class="project-icon icon-dsp">🎛</div>
 <div>
-<div class="project-title">Audio DSP Effects Processor</div>
-<div class="project-subtitle">Signal Processing · Real-Time · Audio</div>
+<div class="project-title" data-zh="实时音频 DSP 效果器" data-en="Audio DSP Effects Processor">实时音频 DSP 效果器</div>
+<div class="project-subtitle" data-zh="信号处理 · 实时 · 音频" data-en="Signal Processing · Real-Time · Audio">信号处理 · 实时 · 音频</div>
 </div>
 </div>
 <div class="project-body">
-<div class="project-desc">Real-time audio effects chain with EQ, compressor, distortion, delay, and reverb. Features lock-free ring buffer, biquad filters, Schroeder reverb, and soft/hard clipping — processing at 44.1kHz.</div>
+<div class="project-desc" data-zh="实时音频效果链：均衡器、压缩器、失真、延迟和混响。采用无锁环形缓冲区、双二阶滤波器、Schroeder 混响和软/硬削波——44.1kHz 实时处理。" data-en="Real-time audio effects chain with EQ, compressor, distortion, delay, and reverb. Features lock-free ring buffer, biquad filters, Schroeder reverb, and soft/hard clipping — processing at 44.1kHz.">实时音频效果链：均衡器、压缩器、失真、延迟和混响。采用无锁环形缓冲区、双二阶滤波器、Schroeder 混响和软/硬削波——44.1kHz 实时处理。</div>
 <div class="project-tags">
-<span class="tag">Biquad</span>
-<span class="tag">Ring Buffer</span>
-<span class="tag">Reverb</span>
-<span class="tag">Compressor</span>
+<span class="tag" data-zh="双二阶滤波" data-en="Biquad">双二阶滤波</span>
+<span class="tag" data-zh="环形缓冲" data-en="Ring Buffer">环形缓冲</span>
+<span class="tag" data-zh="混响" data-en="Reverb">混响</span>
+<span class="tag" data-zh="压缩器" data-en="Compressor">压缩器</span>
 <span class="tag">Web Audio</span>
 </div>
 </div>
 <div class="project-footer">
 <span>EQ · Compressor · Distortion · Delay · Reverb</span>
-<span class="run">▶ Click to Run</span>
+<span class="run" data-zh="▶ 点击运行" data-en="▶ Click to Run">▶ 点击运行</span>
 </div>
 </a>
 </div>
 
 <div class="architecture">
-<h2>⚙ Build Pipeline</h2>
+<h2 data-zh="⚙ 构建流水线" data-en="⚙ Build Pipeline">⚙ 构建流水线</h2>
 <div class="arch-grid">
 <div class="arch-step">
 <div class="num">01</div>
-<div class="title">C/C++ Source</div>
-<div class="detail">Systems-level code with manual memory management, data structures, and algorithms</div>
+<div class="title" data-zh="C/C++ 源码" data-en="C/C++ Source">C/C++ 源码</div>
+<div class="detail" data-zh="系统级代码：手动内存管理、数据结构和算法" data-en="Systems-level code with manual memory management, data structures, and algorithms">系统级代码：手动内存管理、数据结构和算法</div>
 </div>
 <div class="arch-step">
 <div class="num">02</div>
 <div class="title">Emscripten</div>
-<div class="detail">LLVM-based compiler toolchain targeting WebAssembly</div>
+<div class="detail" data-zh="基于 LLVM 的编译工具链，目标平台 WebAssembly" data-en="LLVM-based compiler toolchain targeting WebAssembly">基于 LLVM 的编译工具链，目标平台 WebAssembly</div>
 </div>
 <div class="arch-step">
 <div class="num">03</div>
-<div class="title">.wasm + JS Glue</div>
-<div class="detail">Optimized WebAssembly binary with JavaScript bindings (embind)</div>
+<div class="title" data-zh=".wasm + JS 胶水" data-en=".wasm + JS Glue">.wasm + JS 胶水</div>
+<div class="detail" data-zh="优化的 WebAssembly 二进制文件和 JavaScript 绑定 (embind)" data-en="Optimized WebAssembly binary with JavaScript bindings (embind)">优化的 WebAssembly 二进制文件和 JavaScript 绑定 (embind)</div>
 </div>
 <div class="arch-step">
 <div class="num">04</div>
-<div class="title">Browser Runtime</div>
-<div class="detail">Interactive HTML interface with real-time visualization</div>
+<div class="title" data-zh="浏览器运行时" data-en="Browser Runtime">浏览器运行时</div>
+<div class="detail" data-zh="交互式 HTML 界面，支持实时可视化" data-en="Interactive HTML interface with real-time visualization">交互式 HTML 界面，支持实时可视化</div>
 </div>
 </div>
 </div>
 
 <div class="tech">
-<h2>🛠 Technical Highlights</h2>
+<h2 data-zh="🛠 技术亮点" data-en="🛠 Technical Highlights">🛠 技术亮点</h2>
 <div class="tech-grid">
-<div class="tech-item"><h4>Recursive Descent Parser</h4><p>Hand-written lexer and parser with operator precedence, AST construction, and expression evaluation</p></div>
-<div class="tech-item"><h4>Tri-color Mark-Sweep GC</h4><p>White→Gray→Black marking with incremental scanning and configurable sweep policies</p></div>
-<div class="tech-item"><h4>Lock-free Ring Buffer</h4><p>Single-producer/consumer ring buffer for real-time audio without mutex contention</p></div>
-<div class="tech-item"><h4>Biquad Filters</h4><p>Second-order IIR filters for parametric EQ, lowpass, highpass, and peaking configurations</p></div>
-<div class="tech-item"><h4>Schroeder Reverb</h4><p>Parallel comb filters + series allpass filters for diffuse room simulation</p></div>
-<div class="tech-item"><h4>Pattern Matching Engine</h4><p>POSIX regex-based rule matching with context window management for code analysis</p></div>
+<div class="tech-item"><h4 data-zh="递归下降解析器" data-en="Recursive Descent Parser">递归下降解析器</h4><p data-zh="手写词法分析器和语法分析器，支持运算符优先级、AST 构建和表达式求值" data-en="Hand-written lexer and parser with operator precedence, AST construction, and expression evaluation">手写词法分析器和语法分析器，支持运算符优先级、AST 构建和表达式求值</p></div>
+<div class="tech-item"><h4 data-zh="三色标记-清除 GC" data-en="Tri-color Mark-Sweep GC">三色标记-清除 GC</h4><p data-zh="白→灰→黑标记，增量扫描，可配置清除策略" data-en="White→Gray→Black marking with incremental scanning and configurable sweep policies">白→灰→黑标记，增量扫描，可配置清除策略</p></div>
+<div class="tech-item"><h4 data-zh="无锁环形缓冲区" data-en="Lock-free Ring Buffer">无锁环形缓冲区</h4><p data-zh="单生产者/消费者环形缓冲区，用于无互斥锁的实时音频处理" data-en="Single-producer/consumer ring buffer for real-time audio without mutex contention">单生产者/消费者环形缓冲区，用于无互斥锁的实时音频处理</p></div>
+<div class="tech-item"><h4 data-zh="双二阶滤波器" data-en="Biquad Filters">双二阶滤波器</h4><p data-zh="二阶 IIR 滤波器，用于参数均衡、低通、高通和峰值配置" data-en="Second-order IIR filters for parametric EQ, lowpass, highpass, and peaking configurations">二阶 IIR 滤波器，用于参数均衡、低通、高通和峰值配置</p></div>
+<div class="tech-item"><h4 data-zh="Schroeder 混响" data-en="Schroeder Reverb">Schroeder 混响</h4><p data-zh="并行梳状滤波器 + 串联全通滤波器，实现扩散房间模拟" data-en="Parallel comb filters + series allpass filters for diffuse room simulation">并行梳状滤波器 + 串联全通滤波器，实现扩散房间模拟</p></div>
+<div class="tech-item"><h4 data-zh="模式匹配引擎" data-en="Pattern Matching Engine">模式匹配引擎</h4><p data-zh="基于 POSIX 正则表达式的规则匹配，支持上下文窗口管理" data-en="POSIX regex-based rule matching with context window management for code analysis">基于 POSIX 正则表达式的规则匹配，支持上下文窗口管理</p></div>
 </div>
 </div>
 
 <footer>
-Written in C/C++ · Compiled to WebAssembly via Emscripten 6.0.0 · Runs entirely in browser<br>
-<a href="https://github.com">GitHub</a> · <a href="mailto:contact@example.com">Contact</a>
+<span data-zh="用 C/C++ 编写 · 通过 Emscripten 6.0.0 编译为 WebAssembly · 完全在浏览器中运行" data-en="Written in C/C++ · Compiled to WebAssembly via Emscripten 6.0.0 · Runs entirely in browser">用 C/C++ 编写 · 通过 Emscripten 6.0.0 编译为 WebAssembly · 完全在浏览器中运行</span><br>
+<a href="https://github.com/0011-joe/cpp-portfolio">GitHub</a>
 </footer>
 </div>
+
+<script>
+function setLang(lang) {
+    document.getElementById('btn-zh').classList.toggle('active', lang === 'zh');
+    document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+    document.querySelectorAll('[data-zh]').forEach(function(el) {
+        el.textContent = el.getAttribute('data-' + lang);
+    });
+    document.documentElement.lang = lang === 'zh' ? 'zh' : 'en';
+    localStorage.setItem('lang', lang);
+}
+// Load saved preference, default to Chinese
+var saved = localStorage.getItem('lang') || 'zh';
+setLang(saved);
+</script>
 </body>
 </html>

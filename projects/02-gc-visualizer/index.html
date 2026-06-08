@@ -9,6 +9,11 @@
 :root{--bg:#0a0a0f;--card:#12121a;--border:#1e1e2e;--text:#e0e0e0;--accent:#7c3aed;--green:#22c55e;--red:#ef4444;--yellow:#eab308;--blue:#3b82f6;--orange:#f97316;--gray:#6b7280}
 body{font-family:'Cascadia Code','Fira Code',monospace;background:var(--bg);color:var(--text);min-height:100vh}
 .container{max-width:1400px;margin:0 auto;padding:16px}
+.lang-switch{position:fixed;top:16px;right:16px;z-index:100;display:flex;gap:0;border-radius:6px;overflow:hidden;border:1px solid var(--border)}
+.lang-switch button{padding:6px 14px;border:none;background:var(--card);color:#8b949e;font-family:inherit;font-size:12px;cursor:pointer;transition:all .2s}
+.lang-switch button.active{background:var(--accent);color:#fff}
+.back{display:inline-block;color:var(--accent);text-decoration:none;font-size:13px;margin-bottom:8px}
+.back:hover{text-decoration:underline}
 header{text-align:center;padding:24px 0 16px}
 header h1{font-size:24px;background:linear-gradient(135deg,#7c3aed,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
 header p{color:#6b7280;font-size:12px;margin-top:4px}
@@ -19,8 +24,6 @@ button.danger{border-color:#ef444444;color:var(--red)}
 button.danger:hover{background:#ef444422}
 button.success{border-color:#22c55e44;color:var(--green)}
 button.success:hover{background:#22c55e22}
-button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-button.primary:hover{background:#6d28d9}
 .main{display:grid;grid-template-columns:1fr 320px;gap:16px}
 @media(max-width:900px){.main{grid-template-columns:1fr}}
 .heap-viz{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;min-height:400px}
@@ -33,8 +36,6 @@ button.primary:hover{background:#6d28d9}
 .cell.black{background:#22c55e;border:1px solid #4ade80;color:#000}
 .cell.swept{background:#ef4444;border:1px solid #f87171;animation:sweepFlash .5s}
 @keyframes sweepFlash{0%{transform:scale(1.2)}100%{transform:scale(1)}}
-.cell .tooltip{display:none;position:absolute;bottom:110%;left:50%;transform:translateX(-50%);background:#1e1e2e;border:1px solid var(--border);padding:8px;border-radius:6px;font-size:10px;white-space:nowrap;z-index:10;pointer-events:none}
-.cell:hover .tooltip{display:block}
 .legend{display:flex;gap:16px;margin:16px 0;flex-wrap:wrap}
 .legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:#9ca3af}
 .legend-dot{width:14px;height:14px;border-radius:3px}
@@ -56,7 +57,6 @@ button.primary:hover{background:#6d28d9}
 .obj-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 .obj-item .id{color:var(--accent);width:24px}
 .obj-item .type{color:#9ca3af;flex:1}
-.obj-item .status{font-size:10px}
 .root-badge{background:#22c55e22;color:var(--green);padding:1px 6px;border-radius:8px;font-size:9px}
 .scenarios{margin-top:16px}
 .scenarios h3{color:var(--accent);font-size:14px;margin-bottom:12px}
@@ -69,52 +69,57 @@ footer{text-align:center;padding:30px 0;color:#374151;font-size:11px}
 </style>
 </head>
 <body>
+<div class="lang-switch">
+<button onclick="setLang('zh')" id="btn-zh" class="active">中文</button>
+<button onclick="setLang('en')" id="btn-en">EN</button>
+</div>
 <div class="container">
+<a href="../../index.html" class="back" data-zh="← 返回作品集" data-en="← Back to Portfolio">← 返回作品集</a>
 <header>
-<h1>♻ Mark-Sweep GC Visualizer</h1>
-<p>Interactive garbage collector debugger — watch allocation, marking, and sweeping in real time</p>
+<h1>♻ <span data-zh="标记-清除 GC 可视化调试器" data-en="Mark-Sweep GC Visualizer">标记-清除 GC 可视化调试器</span></h1>
+<p data-zh="交互式垃圾回收调试器 — 实时观察分配、标记和清除过程" data-en="Interactive garbage collector debugger — watch allocation, marking, and sweeping in real time">交互式垃圾回收调试器 — 实时观察分配、标记和清除过程</p>
 </header>
 
 <div class="top-bar">
-<button class="success" onclick="demoBasic()">📦 Basic Demo</button>
-<button class="success" onclick="demoCycle()">🔄 Cycle Demo</button>
-<button class="success" onclick="demoLeak()">💧 Leak Demo</button>
-<button class="danger" onclick="doGC()">🗑 Run GC</button>
-<button onclick="doReset()">↺ Reset</button>
+<button class="success" onclick="demoBasic()" data-zh="📦 基础演示" data-en="📦 Basic Demo">📦 基础演示</button>
+<button class="success" onclick="demoCycle()" data-zh="🔄 循环引用" data-en="🔄 Cycle Demo">🔄 循环引用</button>
+<button class="success" onclick="demoLeak()" data-zh="💧 内存压力" data-en="💧 Leak Demo">💧 内存压力</button>
+<button class="danger" onclick="doGC()" data-zh="🗑 执行 GC" data-en="🗑 Run GC">🗑 执行 GC</button>
+<button onclick="doReset()" data-zh="↺ 重置" data-en="↺ Reset">↺ 重置</button>
 </div>
 
 <div class="main">
 <div>
 <div class="heap-viz">
-<div class="heap-title">📊 Heap Memory Map <span style="color:#6b7280;font-size:11px" id="heapInfo">0/256 bytes</span></div>
+<div class="heap-title">📊 <span data-zh="堆内存映射" data-en="Heap Memory Map">堆内存映射</span> <span style="color:#6b7280;font-size:11px" id="heapInfo">0/256 bytes</span></div>
 <div class="heap-grid" id="heapGrid"></div>
 <div class="legend">
-<div class="legend-item"><div class="legend-dot" style="background:#374151"></div>White (unmarked)</div>
-<div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div>Gray (pending)</div>
-<div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div>Black (marked)</div>
-<div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div>Swept (freed)</div>
-<div class="legend-item"><div class="legend-dot" style="background:#1a1a2e"></div>Free</div>
+<div class="legend-item"><div class="legend-dot" style="background:#374151"></div><span data-zh="白色 (未标记)" data-en="White (unmarked)">白色 (未标记)</span></div>
+<div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div><span data-zh="灰色 (待处理)" data-en="Gray (pending)">灰色 (待处理)</span></div>
+<div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div><span data-zh="黑色 (已标记)" data-en="Black (marked)">黑色 (已标记)</span></div>
+<div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div><span data-zh="红色 (已清除)" data-en="Swept (freed)">红色 (已清除)</span></div>
+<div class="legend-item"><div class="legend-dot" style="background:#1a1a2e"></div><span data-zh="空闲" data-en="Free">空闲</span></div>
 </div>
 </div>
 
 <div class="scenarios">
-<h3>🧪 Scenarios — Click to Load</h3>
+<h3 data-zh="🧪 场景 — 点击加载" data-en="🧪 Scenarios — Click to Load">🧪 场景 — 点击加载</h3>
 <div class="scenario-grid">
 <div class="scenario" onclick="demoBasic()">
-<h4>📦 Basic Allocation</h4>
-<p>Create rooted objects, run GC, see them survive</p>
+<h4 data-zh="📦 基础分配" data-en="📦 Basic Allocation">📦 基础分配</h4>
+<p data-zh="创建有根对象，执行 GC，观察存活对象" data-en="Create rooted objects, run GC, see them survive">创建有根对象，执行 GC，观察存活对象</p>
 </div>
 <div class="scenario" onclick="demoCycle()">
-<h4>🔄 Circular References</h4>
-<p>A↔B cycle with no roots — GC collects both</p>
+<h4 data-zh="🔄 循环引用" data-en="🔄 Circular References">🔄 循环引用</h4>
+<p data-zh="A↔B 循环引用且无根 — GC 同时回收两者" data-en="A↔B cycle with no roots — GC collects both">A↔B 循环引用且无根 — GC 同时回收两者</p>
 </div>
 <div class="scenario" onclick="demoLeak()">
-<h4>💾 Memory Pressure</h4>
-<p>Allocate until threshold, watch GC trigger</p>
+<h4 data-zh="💾 内存压力" data-en="💾 Memory Pressure">💾 内存压力</h4>
+<p data-zh="持续分配直到触发阈值，观察 GC 触发" data-en="Allocate until threshold, watch GC trigger">持续分配直到触发阈值，观察 GC 触发</p>
 </div>
 <div class="scenario" onclick="demoTree()">
-<h4>🌳 Object Tree</h4>
-<p>Tree structure with partial unrooting</p>
+<h4 data-zh="🌳 对象树" data-en="🌳 Object Tree">🌳 对象树</h4>
+<p data-zh="树形结构，部分取消根引用" data-en="Tree structure with partial unrooting">树形结构，部分取消根引用</p>
 </div>
 </div>
 </div>
@@ -122,36 +127,48 @@ footer{text-align:center;padding:30px 0;color:#374151;font-size:11px}
 
 <div class="right-panel">
 <div class="panel">
-<div class="panel-header">📈 Statistics</div>
+<div class="panel-header">📈 <span data-zh="统计" data-en="Statistics">统计</span></div>
 <div class="panel-body">
 <div class="stat-grid">
-<div class="stat"><div class="val" id="statObjects">0</div><div class="label">Objects</div></div>
-<div class="stat"><div class="val" id="statHeap">0</div><div class="label">Heap Used</div></div>
-<div class="stat"><div class="val" id="statAlloc">0</div><div class="label">Allocated</div></div>
-<div class="stat"><div class="val" id="statFreed">0</div><div class="label">Freed</div></div>
-<div class="stat"><div class="val" id="statGC">0</div><div class="label">GC Cycles</div></div>
-<div class="stat"><div class="val" id="statGen">0</div><div class="label">Generation</div></div>
+<div class="stat"><div class="val" id="statObjects">0</div><div class="label" data-zh="对象" data-en="Objects">对象</div></div>
+<div class="stat"><div class="val" id="statHeap">0</div><div class="label" data-zh="堆使用" data-en="Heap Used">堆使用</div></div>
+<div class="stat"><div class="val" id="statAlloc">0</div><div class="label" data-zh="已分配" data-en="Allocated">已分配</div></div>
+<div class="stat"><div class="val" id="statFreed">0</div><div class="label" data-zh="已释放" data-en="Freed">已释放</div></div>
+<div class="stat"><div class="val" id="statGC">0</div><div class="label" data-zh="GC 轮次" data-en="GC Cycles">GC 轮次</div></div>
+<div class="stat"><div class="val" id="statGen">0</div><div class="label" data-zh="代" data-en="Generation">代</div></div>
 </div>
 </div>
 </div>
 
 <div class="panel">
-<div class="panel-header">📋 Objects</div>
-<div class="panel-body obj-list" id="objList">No objects yet</div>
+<div class="panel-header">📋 <span data-zh="对象列表" data-en="Objects">对象列表</span></div>
+<div class="panel-body obj-list" id="objList" data-zh="暂无对象" data-en="No objects yet">暂无对象</div>
 </div>
 
 <div class="panel">
-<div class="panel-header">📝 Event Log</div>
-<div class="panel-body" id="logPanel" style="max-height:300px">Ready.</div>
+<div class="panel-header">📝 <span data-zh="事件日志" data-en="Event Log">事件日志</span></div>
+<div class="panel-body" id="logPanel" style="max-height:300px" data-zh="就绪。" data-en="Ready.">就绪。</div>
 </div>
 </div>
 </div>
 
-<footer>Written in C · Mark-Sweep GC · Compiled to WebAssembly via Emscripten</footer>
+<footer data-zh="用 C 编写 · 标记-清除 GC · 通过 Emscripten 编译为 WebAssembly" data-en="Written in C · Mark-Sweep GC · Compiled to WebAssembly via Emscripten">用 C 编写 · 标记-清除 GC · 通过 Emscripten 编译为 WebAssembly</footer>
 </div>
 
 <script src="gc.js"></script>
 <script>
+function setLang(lang) {
+    document.getElementById('btn-zh').classList.toggle('active', lang === 'zh');
+    document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+    document.querySelectorAll('[data-zh]').forEach(function(el) {
+        el.textContent = el.getAttribute('data-' + lang);
+    });
+    document.documentElement.lang = lang;
+    localStorage.setItem('lang', lang);
+}
+var saved = localStorage.getItem('lang') || 'zh';
+setLang(saved);
+
 var ready = false;
 Module.onRuntimeInitialized = function() { ready = true; refresh(); };
 
@@ -165,46 +182,37 @@ function refresh() {
         renderLog();
     } catch(e) {}
 }
-
 function renderHeap(state) {
     var grid = document.getElementById('heapGrid');
     grid.innerHTML = '';
     var cells = new Array(256).fill(null);
     state.objects.forEach(function(obj) {
         if (obj.alive) {
-            for (var i = obj.offset; i < Math.min(obj.offset + obj.size, 256); i++) {
-                cells[i] = obj;
-            }
+            for (var i = obj.offset; i < Math.min(obj.offset + obj.size, 256); i++) cells[i] = obj;
         }
     });
     for (var i = 0; i < 256; i++) {
         var div = document.createElement('div');
         var obj = cells[i];
-        if (!obj) {
-            div.className = 'cell free';
-        } else {
-            var colorClass = ['white','gray','black'][obj.color] || 'white';
-            div.className = 'cell ' + colorClass;
-            if (obj.offset === i) div.textContent = obj.id;
-        }
+        if (!obj) { div.className = 'cell free'; }
+        else { div.className = 'cell ' + ['white','gray','black'][obj.color]; if (obj.offset === i) div.textContent = obj.id; }
         grid.appendChild(div);
     }
     document.getElementById('heapInfo').textContent = state.stats.heap_used + '/' + state.stats.heap_total + ' bytes';
 }
-
-function renderStats(stats) {
-    document.getElementById('statObjects').textContent = stats.num_objects;
-    document.getElementById('statHeap').textContent = stats.heap_used;
-    document.getElementById('statAlloc').textContent = stats.total_allocated;
-    document.getElementById('statFreed').textContent = stats.total_freed;
-    document.getElementById('statGC').textContent = stats.gc_count;
-    document.getElementById('statGen').textContent = stats.generation;
+function renderStats(s) {
+    document.getElementById('statObjects').textContent = s.num_objects;
+    document.getElementById('statHeap').textContent = s.heap_used;
+    document.getElementById('statAlloc').textContent = s.total_allocated;
+    document.getElementById('statFreed').textContent = s.total_freed;
+    document.getElementById('statGC').textContent = s.gc_count;
+    document.getElementById('statGen').textContent = s.generation;
 }
-
 function renderObjects(state) {
     var list = document.getElementById('objList');
     var alive = state.objects.filter(function(o){return o.alive});
-    if (alive.length === 0) { list.innerHTML = 'No objects'; return; }
+    var lang = localStorage.getItem('lang') || 'zh';
+    if (alive.length === 0) { list.innerHTML = lang === 'zh' ? '暂无对象' : 'No objects'; return; }
     list.innerHTML = '';
     var rootIds = new Set(state.roots);
     alive.forEach(function(obj) {
@@ -212,15 +220,10 @@ function renderObjects(state) {
         div.className = 'obj-item';
         var colorMap = {0:'#374151',1:'#f59e0b',2:'#22c55e'};
         var typeMap = {0:'INT',1:'PAIR',2:'ARRAY',3:'STRING'};
-        var val = typeof obj.value === 'string' ? obj.value : obj.value;
-        div.innerHTML = '<div class="obj-dot" style="background:'+(colorMap[obj.color]||'#374151')+'"></div>' +
-            '<span class="id">#'+obj.id+'</span>' +
-            '<span class="type">'+typeMap[obj.type]+' '+val+'</span>' +
-            (rootIds.has(obj.id) ? '<span class="root-badge">ROOT</span>' : '');
+        div.innerHTML = '<div class="obj-dot" style="background:'+(colorMap[obj.color]||'#374151')+'"></div><span class="id">#'+obj.id+'</span><span class="type">'+typeMap[obj.type]+' '+obj.value+'</span>'+(rootIds.has(obj.id)?'<span class="root-badge">ROOT</span>':'');
         list.appendChild(div);
     });
 }
-
 function renderLog() {
     var log = Module.getLog();
     var panel = document.getElementById('logPanel');
@@ -228,80 +231,18 @@ function renderLog() {
     panel.innerHTML = '';
     lines.forEach(function(line) {
         var div = document.createElement('div');
-        div.className = 'log-line';
-        if (line.includes('+')) div.className += ' alloc';
-        else if (line.includes('Swept') || line.includes('✕')) div.className += ' sweep';
-        else if (line.includes('gray') || line.includes('black') || line.includes('Mark')) div.className += ' mark';
-        else div.className += ' info';
+        div.className = 'log-line' + (line.includes('+')?' alloc':line.includes('Swept')||line.includes('✕')?' sweep':line.includes('gray')||line.includes('black')||line.includes('Mark')?' mark':' info');
         div.textContent = line;
         panel.appendChild(div);
     });
     panel.scrollTop = panel.scrollHeight;
 }
-
-function demoBasic() {
-    if (!ready) return;
-    Module.resetHeap();
-    var a = Module.createInt(42);
-    var b = Module.createInt(100);
-    var c = Module.createPair(a, b);
-    Module.addRoot(c);
-    Module.createInt(999); // unreachable
-    Module.createString("hello");
-    refresh();
-}
-
-function demoCycle() {
-    if (!ready) return;
-    Module.resetHeap();
-    var a = Module.createInt(1);
-    var b = Module.createInt(2);
-    var pa = Module.createPair(a, b);
-    var pb = Module.createPair(b, a);
-    // Create cycle but don't root either
-    Module.createString("unreachable cycle");
-    refresh();
-}
-
-function demoLeak() {
-    if (!ready) return;
-    Module.resetHeap();
-    for (var i = 0; i < 20; i++) {
-        Module.createInt(i * 10);
-    }
-    Module.addRoot(1);
-    refresh();
-}
-
-function demoTree() {
-    if (!ready) return;
-    Module.resetHeap();
-    var root = Module.createString("root");
-    var c1 = Module.createInt(10);
-    var c2 = Module.createInt(20);
-    var c3 = Module.createInt(30);
-    var arr = Module.createArray(3);
-    Module.setArrayElement(arr, 0, c1);
-    Module.setArrayElement(arr, 1, c2);
-    Module.setArrayElement(arr, 2, c3);
-    var pair = Module.createPair(root, arr);
-    Module.addRoot(pair);
-    Module.createInt(999); // garbage
-    Module.createString("garbage");
-    refresh();
-}
-
-function doGC() {
-    if (!ready) return;
-    Module.runGC();
-    refresh();
-}
-
-function doReset() {
-    if (!ready) return;
-    Module.resetHeap();
-    refresh();
-}
+function demoBasic() { if (!ready) return; Module.resetHeap(); var a=Module.createInt(42); var b=Module.createInt(100); var c=Module.createPair(a,b); Module.addRoot(c); Module.createInt(999); Module.createString("hello"); refresh(); }
+function demoCycle() { if (!ready) return; Module.resetHeap(); var a=Module.createInt(1); var b=Module.createInt(2); Module.createPair(a,b); Module.createPair(b,a); Module.createString("unreachable"); refresh(); }
+function demoLeak() { if (!ready) return; Module.resetHeap(); for(var i=0;i<20;i++) Module.createInt(i*10); Module.addRoot(1); refresh(); }
+function demoTree() { if (!ready) return; Module.resetHeap(); var r=Module.createString("root"); var c1=Module.createInt(10); var c2=Module.createInt(20); var c3=Module.createInt(30); var arr=Module.createArray(3); Module.setArrayElement(arr,0,c1); Module.setArrayElement(arr,1,c2); Module.setArrayElement(arr,2,c3); var p=Module.createPair(r,arr); Module.addRoot(p); Module.createInt(999); Module.createString("garbage"); refresh(); }
+function doGC() { if (!ready) return; Module.runGC(); refresh(); }
+function doReset() { if (!ready) return; Module.resetHeap(); refresh(); }
 </script>
 </body>
 </html>

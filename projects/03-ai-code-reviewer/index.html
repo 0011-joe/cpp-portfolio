@@ -9,6 +9,11 @@
 :root{--bg:#0c0c0c;--card:#1a1a1a;--border:#2a2a2a;--text:#d4d4d4;--accent:#00d4aa;--green:#00d4aa;--red:#ff4444;--yellow:#ffaa00;--blue:#4488ff;--purple:#aa66ff;--orange:#ff8844}
 body{font-family:'Cascadia Code','Fira Code',monospace;background:var(--bg);color:var(--text);min-height:100vh}
 .container{max-width:1400px;margin:0 auto;padding:16px}
+.lang-switch{position:fixed;top:16px;right:16px;z-index:100;display:flex;gap:0;border-radius:6px;overflow:hidden;border:1px solid var(--border)}
+.lang-switch button{padding:6px 14px;border:none;background:var(--card);color:#8b949e;font-family:inherit;font-size:12px;cursor:pointer;transition:all .2s}
+.lang-switch button.active{background:var(--accent);color:#fff}
+.back{display:inline-block;color:var(--accent);text-decoration:none;font-size:13px;margin-bottom:8px}
+.back:hover{text-decoration:underline}
 header{text-align:center;padding:20px 0}
 header h1{font-size:22px;color:var(--accent)}
 header p{color:#666;font-size:12px;margin-top:4px}
@@ -27,7 +32,6 @@ button.run:hover{background:#00d4aa33}
 textarea{width:100%;min-height:300px;padding:12px;background:transparent;border:none;color:var(--text);font-family:inherit;font-size:12px;resize:vertical;outline:none;line-height:1.5}
 textarea::placeholder{color:#444}
 .report{padding:12px;font-size:12px;line-height:1.6;white-space:pre-wrap;max-height:600px;overflow-y:auto}
-.report .crit{color:var(--red)}.report .high{color:var(--orange)}.report .med{color:var(--yellow)}.report .low{color:var(--blue)}
 .score-bar{display:flex;align-items:center;gap:16px;padding:16px;background:var(--card);border:1px solid var(--border);border-radius:6px;margin:12px 0}
 .score-circle{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:bold;flex-shrink:0}
 .score-details{flex:1}
@@ -56,19 +60,24 @@ footer{text-align:center;padding:30px 0;color:#333;font-size:11px}
 </style>
 </head>
 <body>
+<div class="lang-switch">
+<button onclick="setLang('zh')" id="btn-zh" class="active">中文</button>
+<button onclick="setLang('en')" id="btn-en">EN</button>
+</div>
 <div class="container">
+<a href="../../index.html" class="back" data-zh="← 返回作品集" data-en="← Back to Portfolio">← 返回作品集</a>
 <header>
-<h1>🔍 AI-Assisted Code Reviewer</h1>
-<p>Terminal-based diff analyzer — security · memory leaks · style · performance</p>
+<h1>🔍 <span data-zh="AI 辅助代码审查工具" data-en="AI-Assisted Code Reviewer">AI 辅助代码审查工具</span></h1>
+<p data-zh="终端 Diff 分析器 — 安全 · 内存泄漏 · 代码风格 · 性能" data-en="Terminal-based diff analyzer — security · memory leaks · style · performance">终端 Diff 分析器 — 安全 · 内存泄漏 · 代码风格 · 性能</p>
 </header>
 
 <div class="top-controls">
-<button class="run" onclick="runReview()">▶ Run Review</button>
-<button onclick="loadSample('vuln')">📋 Vulnerable Code</button>
-<button onclick="loadSample('leak')">💧 Memory Leaks</button>
-<button onclick="loadSample('style')">🎨 Style Issues</button>
-<button onclick="loadSample('clean')">✅ Clean Code</button>
-<button onclick="clearAll()">Clear</button>
+<button class="run" onclick="runReview()" data-zh="▶ 执行审查" data-en="▶ Run Review">▶ 执行审查</button>
+<button onclick="loadSample('vuln')" data-zh="📋 漏洞代码" data-en="📋 Vulnerable Code">📋 漏洞代码</button>
+<button onclick="loadSample('leak')" data-zh="💧 内存泄漏" data-en="💧 Memory Leaks">💧 内存泄漏</button>
+<button onclick="loadSample('style')" data-zh="🎨 风格问题" data-en="🎨 Style Issues">🎨 风格问题</button>
+<button onclick="loadSample('clean')" data-zh="✅ 优质代码" data-en="✅ Clean Code">✅ 优质代码</button>
+<button onclick="clearAll()" data-zh="清空" data-en="Clear">清空</button>
 </div>
 
 <div class="score-bar" id="scoreBar" style="display:none">
@@ -76,10 +85,10 @@ footer{text-align:center;padding:30px 0;color:#333;font-size:11px}
 <div class="score-details">
 <div class="grade" id="scoreGrade">-</div>
 <div class="counters">
-<span class="counter crit" id="critCount">0 Critical</span>
-<span class="counter high" id="highCount">0 High</span>
-<span class="counter med" id="medCount">0 Medium</span>
-<span class="counter low" id="lowCount">0 Low</span>
+<span class="counter crit" id="critCount">0</span>
+<span class="counter high" id="highCount">0</span>
+<span class="counter med" id="medCount">0</span>
+<span class="counter low" id="lowCount">0</span>
 </div>
 </div>
 </div>
@@ -88,9 +97,18 @@ footer{text-align:center;padding:30px 0;color:#333;font-size:11px}
 <div class="panel">
 <div class="panel-bar">
 <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
-<span>diff input</span>
+<span data-zh="diff 输入" data-en="diff input">diff 输入</span>
 </div>
-<textarea id="diffInput" placeholder="Paste your git diff here...
+<textarea id="diffInput" data-placeholder-zh="在此粘贴你的 git diff...
+
+格式：
+@@ -1,5 +1,8 @@
+ #include <stdio.h>
++char buf[64];
++strcpy(buf, input);  // 不安全!
+ int main() {
+     return 0;
+ }" data-placeholder-en="Paste your git diff here...
 
 Format:
 @@ -1,5 +1,8 @@
@@ -104,98 +122,108 @@ Format:
 <div class="panel">
 <div class="panel-bar">
 <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
-<span>review report</span>
+<span data-zh="审查报告" data-en="review report">审查报告</span>
 </div>
-<div class="report" id="report">Ready. Paste a diff and click Run Review.</div>
+<div class="report" id="report" data-zh="就绪。粘贴 diff 并点击执行审查。" data-en="Ready. Paste a diff and click Run Review.">就绪。粘贴 diff 并点击执行审查。</div>
 </div>
 </div>
 
 <div class="samples">
-<h3>📝 Sample Diffs — Click to Load</h3>
+<h3 data-zh="📝 示例 Diff — 点击加载" data-en="📝 Sample Diffs — Click to Load">📝 示例 Diff — 点击加载</h3>
 <div class="sample-grid">
 <div class="sample" onclick="loadSample('vuln')">
-<h4>🔴 Security Vulnerabilities</h4>
-<p>strcpy, gets, sprintf — buffer overflow heaven</p>
+<h4 data-zh="🔴 安全漏洞" data-en="🔴 Security Vulnerabilities">🔴 安全漏洞</h4>
+<p data-zh="strcpy, gets, sprintf — 缓冲区溢出" data-en="strcpy, gets, sprintf — buffer overflow heaven">strcpy, gets, sprintf — 缓冲区溢出</p>
 </div>
 <div class="sample" onclick="loadSample('leak')">
-<h4>💧 Memory Management Issues</h4>
-<p>Missing free, unchecked malloc, use-after-free</p>
+<h4 data-zh="💧 内存管理问题" data-en="💧 Memory Management Issues">💧 内存管理问题</h4>
+<p data-zh="缺少 free、未检查 malloc、释放后使用" data-en="Missing free, unchecked malloc, use-after-free">缺少 free、未检查 malloc、释放后使用</p>
 </div>
 <div class="sample" onclick="loadSample('style')">
-<h4>🎨 Code Style Problems</h4>
-<p>Mixed tabs/spaces, goto, TODO comments</p>
+<h4 data-zh="🎨 代码风格问题" data-en="🎨 Code Style Problems">🎨 代码风格问题</h4>
+<p data-zh="混合制表符/空格、goto、TODO 注释" data-en="Mixed tabs/spaces, goto, TODO comments">混合制表符/空格、goto、TODO 注释</p>
 </div>
 <div class="sample" onclick="loadSample('clean')">
-<h4>✅ Clean Code Example</h4>
-<p>Well-written code — should score high</p>
+<h4 data-zh="✅ 优质代码示例" data-en="✅ Clean Code Example">✅ 优质代码示例</h4>
+<p data-zh="规范代码 — 应得高分" data-en="Well-written code — should score high">规范代码 — 应得高分</p>
 </div>
 </div>
 </div>
 
 <div class="arch">
-<h3>⚙ Architecture</h3>
+<h3 data-zh="⚙ 架构" data-en="⚙ Architecture">⚙ 架构</h3>
 <div class="pipeline">
-<div class="step"><div class="label">Input</div><div class="name">Git Diff</div></div>
+<div class="step"><div class="label" data-zh="输入" data-en="Input">输入</div><div class="name" data-zh="Git Diff" data-en="Git Diff">Git Diff</div></div>
 <div class="arrow">→</div>
-<div class="step"><div class="label">Phase 1</div><div class="name">Diff Parser<br><small>Line slicing</small></div></div>
+<div class="step"><div class="label" data-zh="阶段1" data-en="Phase 1">阶段1</div><div class="name" data-zh="Diff 解析器<br><small>行切片</small>" data-en="Diff Parser<br><small>Line slicing</small>">Diff 解析器<br><small>行切片</small></div></div>
 <div class="arrow">→</div>
-<div class="step"><div class="label">Phase 2</div><div class="name">Pattern Engine<br><small>Rule matching</small></div></div>
+<div class="step"><div class="label" data-zh="阶段2" data-en="Phase 2">阶段2</div><div class="name" data-zh="模式引擎<br><small>规则匹配</small>" data-en="Pattern Engine<br><small>Rule matching</small>">模式引擎<br><small>规则匹配</small></div></div>
 <div class="arrow">→</div>
-<div class="step"><div class="label">Phase 3</div><div class="name">Context Builder<br><small>Window management</small></div></div>
+<div class="step"><div class="label" data-zh="阶段3" data-en="Phase 3">阶段3</div><div class="name" data-zh="上下文构建<br><small>窗口管理</small>" data-en="Context Builder<br><small>Window management</small>">上下文构建<br><small>窗口管理</small></div></div>
 <div class="arrow">→</div>
-<div class="step"><div class="label">Output</div><div class="name">Review Report<br><small>Score + Issues</small></div></div>
+<div class="step"><div class="label" data-zh="输出" data-en="Output">输出</div><div class="name" data-zh="审查报告<br><small>评分+问题</small>" data-en="Review Report<br><small>Score + Issues</small>">审查报告<br><small>评分+问题</small></div></div>
 </div>
 </div>
 
-<footer>C99 Pattern Engine · Diff Parser · Context Window Manager · Compiled to WebAssembly</footer>
+<footer data-zh="C99 模式引擎 · Diff 解析器 · 上下文窗口管理 · 编译为 WebAssembly" data-en="C99 Pattern Engine · Diff Parser · Context Window Manager · Compiled to WebAssembly">C99 模式引擎 · Diff 解析器 · 上下文窗口管理 · 编译为 WebAssembly</footer>
 </div>
 
 <script src="reviewer.js"></script>
 <script>
+function setLang(lang) {
+    document.getElementById('btn-zh').classList.toggle('active', lang === 'zh');
+    document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+    document.querySelectorAll('[data-zh]').forEach(function(el) { el.textContent = el.getAttribute('data-' + lang); });
+    var ta = document.getElementById('diffInput');
+    ta.placeholder = ta.getAttribute('data-placeholder-' + lang);
+    document.documentElement.lang = lang;
+    localStorage.setItem('lang', lang);
+}
+var saved = localStorage.getItem('lang') || 'zh';
+setLang(saved);
+
 var samples = {
 vuln: '@@ -1,8 +1,14 @@\n #include <stdio.h>\n+#include <string.h>\n+#include <stdlib.h>\n \n-void process(const char* input) {\n-    printf("%s\\n", input);\n+void process(const char* user_input) {\n+    char buf[64];\n+    strcpy(buf, user_input);\n+    sprintf(buf, "Hello %s", user_input);\n+    gets(buf);\n+    system(user_input);\n+    char cmd[128];\n+    sprintf(cmd, "echo %s", user_input);\n+    system(cmd);\n }\n',
 leak: '@@ -1,10 +1,18 @@\n #include <stdio.h>\n #include <stdlib.h>\n \n-void init() {\n-    printf("init\\n");\n+char* create_buffer(int size) {\n+    char* buf = malloc(size);\n+    return buf;\n+}\n+\n+void process() {\n+    char* data = malloc(1024);\n+    char* tmp = realloc(data, 2048);\n+    memcpy(tmp, src, len);\n+    char* extra = calloc(100, sizeof(int));\n+    char* stack = alloca(256);\n+    free(data);\n }\n',
-style: '@@ -1,12 +1,16 @@\n #include <stdio.h>\n \n-int main() {\n-    printf("hello\\n");\n-    return 0;\n+int main(int argc, char** argv) {\n+\tif (argc < 2) {\n+	    printf("Usage: %s <arg>\\n", argv[0]);\n+	    goto error;\n+	}\n+\t// TODO: fix this later\n+\t// HACK: workaround for bug #123\n+\tint magic_value = 42;\n+\tfor (int i = 0; i < strlen(argv[1]); i++) {\n+\t\tprintf("%c\\n", argv[1][i]);\n+\t}\n+\terror:\n+\treturn 1;\n }\n',
+style: '@@ -1,12 +1,16 @@\n #include <stdio.h>\n \n-int main() {\n-    printf("hello\\n");\n-    return 0;\n+int main(int argc, char** argv) {\n+\tif (argc < 2) {\n+\t    printf("Usage: %s <arg>\\n", argv[0]);\n+\t    goto error;\n+\t}\n+\t// TODO: fix this later\n+\t// HACK: workaround for bug #123\n+\tint magic_value = 42;\n+\tfor (int i = 0; i < strlen(argv[1]); i++) {\n+\t\tprintf("%c\\n", argv[1][i]);\n+\t}\n+\terror:\n+\treturn 1;\n }\n',
 clean: '@@ -1,8 +1,12 @@\n #include <stdio.h>\n+#include <stdlib.h>\n+#include <string.h>\n \n-int main() {\n-    return 0;\n+int main(int argc, char** argv) {\n+    if (argc < 2) {\n+        fprintf(stderr, "Usage: %s <name>\\n", argv[0]);\n+        return EXIT_FAILURE;\n+    }\n+    char buf[256];\n+    snprintf(buf, sizeof(buf), "Hello, %s!", argv[1]);\n+    puts(buf);\n+    return EXIT_SUCCESS;\n }\n'
 };
 
-function loadSample(name) {
-    document.getElementById('diffInput').value = samples[name];
-    runReview();
-}
-
+function loadSample(name) { document.getElementById('diffInput').value = samples[name]; runReview(); }
 function runReview() {
     var diff = document.getElementById('diffInput').value.trim();
     if (!diff) return;
+    var lang = localStorage.getItem('lang') || 'zh';
     try {
         var report = Module.reviewDiff(diff);
         document.getElementById('report').textContent = report;
         var score = Module.getScore();
-        var crit = Module.getCritCount();
-        var high = Module.getHighCount();
-        var med = Module.getMedCount();
-        var low = Module.getLowCount();
+        var crit = Module.getCritCount(), high = Module.getHighCount(), med = Module.getMedCount(), low = Module.getLowCount();
         var bar = document.getElementById('scoreBar');
         bar.style.display = 'flex';
         var circle = document.getElementById('scoreCircle');
         circle.textContent = score;
-        if (score >= 80) circle.style.background = '#00d4aa22';
-        else if (score >= 60) circle.style.background = '#ffaa0022';
-        else circle.style.background = '#ff444422';
+        circle.style.background = score >= 80 ? '#00d4aa22' : score >= 60 ? '#ffaa0022' : '#ff444422';
         circle.style.color = score >= 80 ? '#00d4aa' : score >= 60 ? '#ffaa00' : '#ff4444';
-        document.getElementById('scoreGrade').textContent = score >= 90 ? 'A+ Excellent' : score >= 80 ? 'A Good' : score >= 70 ? 'B Acceptable' : score >= 60 ? 'C Needs Work' : score >= 50 ? 'D Poor' : 'F Critical';
-        document.getElementById('critCount').textContent = crit + ' Critical';
-        document.getElementById('highCount').textContent = high + ' High';
-        document.getElementById('medCount').textContent = med + ' Medium';
-        document.getElementById('lowCount').textContent = low + ' Low';
-    } catch(e) {
-        document.getElementById('report').textContent = 'Error: ' + e.message;
-    }
+        var grades = lang === 'zh' ?
+            ['A+ 优秀','A 良好','B 可接受','C 需改进','D 较差','F 严重问题'] :
+            ['A+ Excellent','A Good','B Acceptable','C Needs Work','D Poor','F Critical'];
+        var gi = score >= 90 ? 0 : score >= 80 ? 1 : score >= 70 ? 2 : score >= 60 ? 3 : score >= 50 ? 4 : 5;
+        document.getElementById('scoreGrade').textContent = grades[gi];
+        var cLabel = lang === 'zh' ? ' 严重' : ' Critical';
+        var hLabel = lang === 'zh' ? ' 高危' : ' High';
+        var mLabel = lang === 'zh' ? ' 中等' : ' Medium';
+        var lLabel = lang === 'zh' ? ' 低危' : ' Low';
+        document.getElementById('critCount').textContent = crit + cLabel;
+        document.getElementById('highCount').textContent = high + hLabel;
+        document.getElementById('medCount').textContent = med + mLabel;
+        document.getElementById('lowCount').textContent = low + lLabel;
+    } catch(e) { document.getElementById('report').textContent = 'Error: ' + e.message; }
 }
-
 function clearAll() {
     document.getElementById('diffInput').value = '';
-    document.getElementById('report').textContent = 'Ready.';
+    var lang = localStorage.getItem('lang') || 'zh';
+    document.getElementById('report').textContent = lang === 'zh' ? '就绪。' : 'Ready.';
     document.getElementById('scoreBar').style.display = 'none';
 }
 </script>

@@ -9,6 +9,11 @@
 :root{--bg:#0d1117;--card:#161b22;--border:#30363d;--text:#c9d1d9;--accent:#58a6ff;--green:#3fb950;--red:#f85149;--yellow:#d29922;--purple:#bc8cff}
 body{font-family:'Cascadia Code','Fira Code','JetBrains Mono',monospace;background:var(--bg);color:var(--text);min-height:100vh}
 .container{max-width:1200px;margin:0 auto;padding:20px}
+.lang-switch{position:fixed;top:16px;right:16px;z-index:100;display:flex;gap:0;border-radius:6px;overflow:hidden;border:1px solid var(--border)}
+.lang-switch button{padding:6px 14px;border:none;background:var(--card);color:#8b949e;font-family:inherit;font-size:12px;cursor:pointer;transition:all .2s}
+.lang-switch button.active{background:var(--accent);color:#fff}
+.back{display:inline-block;color:var(--accent);text-decoration:none;font-size:13px;margin-bottom:16px}
+.back:hover{text-decoration:underline}
 header{text-align:center;padding:40px 0 30px;border-bottom:1px solid var(--border);margin-bottom:30px}
 header h1{font-size:28px;color:var(--accent);margin-bottom:8px}
 header p{color:#8b949e;font-size:14px}
@@ -53,108 +58,122 @@ footer{text-align:center;padding:40px 0;color:#484f58;font-size:12px}
 </style>
 </head>
 <body>
+<div class="lang-switch">
+<button onclick="setLang('zh')" id="btn-zh" class="active">中文</button>
+<button onclick="setLang('en')" id="btn-en">EN</button>
+</div>
 <div class="container">
+<a href="../../index.html" class="back" data-zh="← 返回作品集" data-en="← Back to Portfolio">← 返回作品集</a>
 <header>
-<h1>⟨ Relational DSL Interpreter ⟩</h1>
-<p>A mini declarative language for data analysis — Lexer · Parser · Relational Algebra · CSV Backend</p>
+<h1>⟨ <span data-zh="关系型 DSL 解释器" data-en="Relational DSL Interpreter">关系型 DSL 解释器</span> ⟩</h1>
+<p data-zh="面向数据分析的微型声明式语言 — 词法分析 · 语法分析 · 关系代数 · CSV 后端" data-en="A mini declarative language for data analysis — Lexer · Parser · Relational Algebra · CSV Backend">面向数据分析的微型声明式语言 — 词法分析 · 语法分析 · 关系代数 · CSV 后端</p>
 <div style="margin-top:12px">
 <span class="badge badge-c">C99</span>
 <span class="badge badge-wasm">WebAssembly</span>
-<span class="badge badge-parser">Recursive Descent</span>
+<span class="badge badge-parser" data-zh="递归下降" data-en="Recursive Descent">递归下降</span>
 </div>
 </header>
 
 <div class="main">
 <div class="panel">
 <div class="panel-header">
-<div class="dot dot-red"></div>
-<div class="dot dot-yellow"></div>
-<div class="dot dot-green"></div>
+<div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div>
 <span>query.dsl</span>
 </div>
-<textarea id="sqlInput" placeholder="Enter your SQL-like query here...">SELECT name, age, salary FROM employees WHERE age > 30 ORDER BY salary DESC</textarea>
+<textarea id="sqlInput" data-placeholder-zh="在此输入 SQL 查询语句..." data-placeholder-en="Enter your SQL-like query here...">SELECT name, age, salary FROM employees WHERE age > 30 ORDER BY salary DESC</textarea>
 <div class="actions">
-<button class="primary" onclick="executeQuery()">▶ Execute</button>
-<button onclick="clearOutput()">Clear</button>
-<button onclick="showSchema()">Show Schema</button>
+<button class="primary" onclick="executeQuery()" data-zh="▶ 执行" data-en="▶ Execute">▶ 执行</button>
+<button onclick="clearOutput()" data-zh="清空" data-en="Clear">清空</button>
+<button onclick="showSchema()" data-zh="查看表结构" data-en="Show Schema">查看表结构</button>
 </div>
 </div>
 <div class="panel">
 <div class="panel-header">
-<div class="dot dot-red"></div>
-<div class="dot dot-yellow"></div>
-<div class="dot dot-green"></div>
+<div class="dot dot-red"></div><div class="dot dot-yellow"></div><div class="dot dot-green"></div>
 <span>output</span>
 </div>
-<div class="output" id="output">Ready. Enter a query and click Execute.</div>
+<div class="output" id="output" data-zh="就绪。输入查询语句并点击执行。" data-en="Ready. Enter a query and click Execute.">就绪。输入查询语句并点击执行。</div>
 </div>
 </div>
 
 <div class="examples">
-<h2>📝 Example Queries — Click to Run</h2>
+<h2 data-zh="📝 示例查询 — 点击运行" data-en="📝 Example Queries — Click to Run">📝 示例查询 — 点击运行</h2>
 <div class="example-grid">
 <div class="example" onclick="setQuery(this.dataset.q)" data-q="SELECT * FROM employees">
 <code>SELECT * FROM employees</code>
-<div class="desc">Show all employees</div>
+<div class="desc" data-zh="查看所有员工" data-en="Show all employees">查看所有员工</div>
 </div>
 <div class="example" onclick="setQuery(this.dataset.q)" data-q="SELECT name, salary FROM employees WHERE age > 30 ORDER BY salary DESC">
 <code>SELECT name, salary FROM employees WHERE age > 30 ORDER BY salary DESC</code>
-<div class="desc">Senior employees by salary</div>
+<div class="desc" data-zh="按薪资排序的资深员工" data-en="Senior employees by salary">按薪资排序的资深员工</div>
 </div>
 <div class="example" onclick="setQuery(this.dataset.q)" data-q="SELECT name, price FROM products WHERE price < 100">
 <code>SELECT name, price FROM products WHERE price < 100</code>
-<div class="desc">Affordable products</div>
+<div class="desc" data-zh="低价产品" data-en="Affordable products">低价产品</div>
 </div>
 <div class="example" onclick="setQuery(this.dataset.q)" data-q="SELECT name, age FROM employees WHERE department == 'Engineering' ORDER BY age">
 <code>SELECT name, age FROM employees WHERE department == 'Engineering' ORDER BY age</code>
-<div class="desc">Engineering team by age</div>
+<div class="desc" data-zh="工程团队按年龄排序" data-en="Engineering team by age">工程团队按年龄排序</div>
 </div>
 <div class="example" onclick="setQuery(this.dataset.q)" data-q="SELECT name, price FROM products WHERE price > 100 AND price < 500 ORDER BY price">
 <code>SELECT name, price FROM products WHERE price > 100 AND price < 500 ORDER BY price</code>
-<div class="desc">Mid-range products</div>
+<div class="desc" data-zh="中等价位产品" data-en="Mid-range products">中等价位产品</div>
 </div>
 <div class="example" onclick="setQuery(this.dataset.q)" data-q="SELECT * FROM orders WHERE quantity > 1 ORDER BY total DESC">
 <code>SELECT * FROM orders WHERE quantity > 1 ORDER BY total DESC</code>
-<div class="desc">Bulk orders</div>
+<div class="desc" data-zh="批量订单" data-en="Bulk orders">批量订单</div>
 </div>
 </div>
 </div>
 
 <div class="schema" id="schemaPanel" style="display:none">
-<h2>📊 Database Schema</h2>
+<h2 data-zh="📊 数据库表结构" data-en="📊 Database Schema">📊 数据库表结构</h2>
 <pre id="schemaContent"></pre>
 </div>
 
 <div class="arch">
-<h2>⚙ Architecture Pipeline</h2>
+<h2 data-zh="⚙ 架构流水线" data-en="⚙ Architecture Pipeline">⚙ 架构流水线</h2>
 <div class="pipeline">
-<div class="step"><div class="label">Input</div><div class="name">SQL String</div></div>
+<div class="step"><div class="label" data-zh="输入" data-en="Input">输入</div><div class="name" data-zh="SQL 字符串" data-en="SQL String">SQL 字符串</div></div>
 <div class="arrow">→</div>
-<div class="step"><div class="label">Phase 1</div><div class="name">Lexer<br><small>Tokenize</small></div></div>
+<div class="step"><div class="label" data-zh="阶段1" data-en="Phase 1">阶段1</div><div class="name" data-zh="词法分析器<br><small>分词</small>" data-en="Lexer<br><small>Tokenize</small>">词法分析器<br><small>分词</small></div></div>
 <div class="arrow">→</div>
-<div class="step"><div class="label">Phase 2</div><div class="name">Parser<br><small>AST Build</small></div></div>
+<div class="step"><div class="label" data-zh="阶段2" data-en="Phase 2">阶段2</div><div class="name" data-zh="语法分析器<br><small>构建 AST</small>" data-en="Parser<br><small>AST Build</small>">语法分析器<br><small>构建 AST</small></div></div>
 <div class="arrow">→</div>
-<div class="step"><div class="label">Phase 3</div><div class="name">Executor<br><small>Relational Alg.</small></div></div>
+<div class="step"><div class="label" data-zh="阶段3" data-en="Phase 3">阶段3</div><div class="name" data-zh="执行器<br><small>关系代数</small>" data-en="Executor<br><small>Relational Alg.</small>">执行器<br><small>关系代数</small></div></div>
 <div class="arrow">→</div>
-<div class="step"><div class="label">Output</div><div class="name">Result Table</div></div>
+<div class="step"><div class="label" data-zh="输出" data-en="Output">输出</div><div class="name" data-zh="结果表" data-en="Result Table">结果表</div></div>
 </div>
 </div>
 
-<footer>Written in C99 · Compiled to WebAssembly via Emscripten · Runs entirely in browser</footer>
+<footer data-zh="用 C99 编写 · 通过 Emscripten 编译为 WebAssembly · 完全在浏览器中运行" data-en="Written in C99 · Compiled to WebAssembly via Emscripten · Runs entirely in browser">用 C99 编写 · 通过 Emscripten 编译为 WebAssembly · 完全在浏览器中运行</footer>
 </div>
 
 <script src="dsl.js"></script>
 <script>
-Module.onRuntimeInitialized = function() {
-    document.querySelector('.primary').textContent = '▶ Execute';
-};
+function setLang(lang) {
+    document.getElementById('btn-zh').classList.toggle('active', lang === 'zh');
+    document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+    document.querySelectorAll('[data-zh]').forEach(function(el) {
+        el.textContent = el.getAttribute('data-' + lang);
+    });
+    var ta = document.getElementById('sqlInput');
+    ta.placeholder = ta.getAttribute('data-placeholder-' + lang);
+    document.documentElement.lang = lang;
+    localStorage.setItem('lang', lang);
+}
+var saved = localStorage.getItem('lang') || 'zh';
+setLang(saved);
+
+Module.onRuntimeInitialized = function() {};
 
 function executeQuery() {
     var sql = document.getElementById('sqlInput').value.trim();
     if (!sql) return;
     var out = document.getElementById('output');
     out.className = 'output';
-    out.textContent = 'Executing...';
+    var lang = localStorage.getItem('lang') || 'zh';
+    out.textContent = lang === 'zh' ? '执行中...' : 'Executing...';
     try {
         var result = Module.runQuery(sql);
         if (result.startsWith('Error:')) {
@@ -165,38 +184,28 @@ function executeQuery() {
         out.textContent = result;
     } catch(e) {
         out.className = 'output error';
-        out.textContent = 'Runtime error: ' + e.message;
+        out.textContent = (lang === 'zh' ? '运行时错误: ' : 'Runtime error: ') + e.message;
     }
 }
-
 function clearOutput() {
     document.getElementById('output').className = 'output';
-    document.getElementById('output').textContent = 'Ready.';
+    var lang = localStorage.getItem('lang') || 'zh';
+    document.getElementById('output').textContent = lang === 'zh' ? '就绪。' : 'Ready.';
 }
-
 function setQuery(q) {
     document.getElementById('sqlInput').value = q;
     executeQuery();
 }
-
 function showSchema() {
     var panel = document.getElementById('schemaPanel');
     if (panel.style.display === 'none') {
         panel.style.display = 'block';
-        try {
-            document.getElementById('schemaContent').textContent = Module.getTablesInfo();
-        } catch(e) {
-            document.getElementById('schemaContent').textContent = 'Loading...';
-        }
-    } else {
-        panel.style.display = 'none';
-    }
+        try { document.getElementById('schemaContent').textContent = Module.getTablesInfo(); }
+        catch(e) { document.getElementById('schemaContent').textContent = 'Loading...'; }
+    } else { panel.style.display = 'none'; }
 }
-
 document.getElementById('sqlInput').addEventListener('keydown', function(e) {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        executeQuery();
-    }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') executeQuery();
 });
 </script>
 </body>
