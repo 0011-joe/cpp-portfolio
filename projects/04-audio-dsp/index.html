@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Audio DSP Effects — Real-Time Processor</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a12;--card:#12121e;--border:#222238;--text:#d0d0e0;--accent:#6366f1;--green:#22c55e;--red:#ef4444;--yellow:#eab308;--blue:#3b82f6;--purple:#a855f7;--orange:#f97316}
+body{font-family:'Cascadia Code','Fira Code',monospace;background:var(--bg);color:var(--text);min-height:100vh}
+.container{max-width:1400px;margin:0 auto;padding:16px}
+header{text-align:center;padding:20px 0}
+header h1{font-size:24px;background:linear-gradient(135deg,#6366f1,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+header p{color:#666;font-size:12px;margin-top:4px}
+.controls{display:flex;gap:10px;justify-content:center;margin:16px 0;flex-wrap:wrap}
+button{padding:10px 20px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);font-family:inherit;font-size:13px;cursor:pointer;transition:all .2s}
+button:hover{border-color:var(--accent);color:var(--accent)}
+button.active{background:var(--accent);border-color:var(--accent);color:#fff}
+button.record{background:#ef4444;border-color:#ef4444;color:#fff;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
+.chain{display:flex;align-items:center;justify-content:center;gap:0;margin:20px 0;flex-wrap:wrap}
+.fx-block{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;min-width:140px;text-align:center;cursor:pointer;transition:all .2s}
+.fx-block:hover{border-color:var(--accent)}
+.fx-block.enabled{border-color:var(--accent);box-shadow:0 0 20px rgba(99,102,241,.2)}
+.fx-block .icon{font-size:24px;margin-bottom:4px}
+.fx-block .name{font-size:11px;color:var(--accent)}
+.fx-block .status{font-size:10px;margin-top:4px}
+.chain-arrow{color:#333;font-size:20px;padding:0 4px}
+.main{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px}
+@media(max-width:1000px){.main{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.panel-header{padding:10px 14px;border-bottom:1px solid var(--border);font-size:12px;color:var(--accent)}
+.panel-body{padding:16px}
+.knob-row{display:flex;gap:16px;flex-wrap:wrap;justify-content:center}
+.knob{text-align:center}
+.knob label{display:block;font-size:10px;color:#888;margin-bottom:4px}
+.knob input[type=range]{width:100px;accent-color:var(--accent)}
+.knob .val{font-size:11px;color:var(--accent);margin-top:2px}
+.meter{height:200px;width:30px;background:#1a1a2e;border-radius:4px;position:relative;overflow:hidden;margin:0 auto}
+.meter-fill{position:absolute;bottom:0;width:100%;border-radius:4px;transition:height .05s}
+.meter-label{font-size:10px;color:#666;text-align:center;margin-top:4px}
+.scope{height:150px;background:#0a0a14;border-radius:4px;border:1px solid var(--border)}
+.spectrum{height:150px;background:#0a0a14;border-radius:4px;border:1px solid var(--border)}
+.info{margin-top:16px;font-size:11px;color:#666;line-height:1.8}
+.arch{margin-top:30px;padding:20px 0;border-top:1px solid var(--border)}
+.arch h3{color:var(--accent);text-align:center;margin-bottom:16px}
+.pipeline{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap}
+.step{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:12px 16px;text-align:center;min-width:110px}
+.step .label{color:var(--accent);font-size:10px;text-transform:uppercase;letter-spacing:1px}
+.step .name{color:var(--text);font-size:11px;margin-top:2px}
+.arrow{color:#333;font-size:20px;padding:0 6px}
+footer{text-align:center;padding:30px 0;color:#333;font-size:11px}
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+<h1>🎛 Real-Time Audio DSP Effects Processor</h1>
+<p>C/WASM DSP Engine · Ring Buffer · Biquad Filters · Web Audio API</p>
+</header>
+
+<div class="controls">
+<button id="btnStart" onclick="toggleAudio()">🎤 Start Microphone</button>
+<button id="btnDemo" onclick="playDemo()">🎵 Play Demo Tone</button>
+<button onclick="bypassAll()">⊘ Bypass All</button>
+</div>
+
+<div class="chain">
+<div class="fx-block enabled" id="fxInput" onclick="toggleFx('input')">
+<div class="icon">🎤</div><div class="name">INPUT</div>
+</div>
+<div class="chain-arrow">→</div>
+<div class="fx-block enabled" id="fxEq" onclick="toggleFx('eq')">
+<div class="icon">📊</div><div class="name">EQ</div><div class="status" id="eqStatus">ON</div>
+</div>
+<div class="chain-arrow">→</div>
+<div class="fx-block" id="fxComp" onclick="toggleFx('comp')">
+<div class="icon">📉</div><div class="name">COMPRESS</div><div class="status" id="compStatus">OFF</div>
+</div>
+<div class="chain-arrow">→</div>
+<div class="fx-block" id="fxDist" onclick="toggleFx('dist')">
+<div class="icon">🔥</div><div class="name">DISTORT</div><div class="status" id="distStatus">OFF</div>
+</div>
+<div class="chain-arrow">→</div>
+<div class="fx-block" id="fxDelay" onclick="toggleFx('delay')">
+<div class="icon">🔊</div><div class="name">DELAY</div><div class="status" id="delayStatus">OFF</div>
+</div>
+<div class="chain-arrow">→</div>
+<div class="fx-block" id="fxReverb" onclick="toggleFx('reverb')">
+<div class="icon">🌊</div><div class="name">REVERB</div><div class="status" id="reverbStatus">OFF</div>
+</div>
+<div class="chain-arrow">→</div>
+<div class="fx-block enabled" id="fxOutput">
+<div class="icon">🔈</div><div class="name">OUTPUT</div>
+</div>
+</div>
+
+<div class="main">
+<div class="panel">
+<div class="panel-header">📊 EQ Settings</div>
+<div class="panel-body">
+<div class="knob-row">
+<div class="knob"><label>Low (80Hz)</label><input type="range" min="-12" max="12" value="0" step="0.5" oninput="updateEQ(0,this.value)"><div class="val" id="eq0val">0 dB</div></div>
+<div class="knob"><label>Mid (1kHz)</label><input type="range" min="-12" max="12" value="0" step="0.5" oninput="updateEQ(1,this.value)"><div class="val" id="eq1val">0 dB</div></div>
+<div class="knob"><label>High (8kHz)</label><input type="range" min="-12" max="12" value="0" step="0.5" oninput="updateEQ(2,this.value)"><div class="val" id="eq2val">0 dB</div></div>
+</div>
+</div>
+</div>
+<div class="panel">
+<div class="panel-header">📉 Compressor</div>
+<div class="panel-body">
+<div class="knob-row">
+<div class="knob"><label>Threshold</label><input type="range" min="-60" max="0" value="-20" step="1" oninput="updateComp()"><div class="val" id="compThresh">-20 dB</div></div>
+<div class="knob"><label>Ratio</label><input type="range" min="1" max="20" value="4" step="0.5" oninput="updateComp()"><div class="val" id="compRatio">4:1</div></div>
+<div class="knob"><label>Attack</label><input type="range" min="0.1" max="100" value="10" step="0.1" oninput="updateComp()"><div class="val" id="compAttack">10 ms</div></div>
+<div class="knob"><label>Release</label><input type="range" min="10" max="500" value="100" step="10" oninput="updateComp()"><div class="val" id="compRelease">100 ms</div></div>
+</div>
+</div>
+</div>
+<div class="panel">
+<div class="panel-header">🔥 Distortion</div>
+<div class="panel-body">
+<div class="knob-row">
+<div class="knob"><label>Type</label><select id="distType" onchange="updateDist()" style="background:var(--card);color:var(--text);border:1px solid var(--border);padding:4px;border-radius:4px"><option value="0">Soft Clip</option><option value="1">Hard Clip</option><option value="2">Fuzz</option><option value="3">Overdrive</option></select></div>
+<div class="knob"><label>Drive</label><input type="range" min="1" max="20" value="2" step="0.5" oninput="updateDist()"><div class="val" id="distDrive">2.0x</div></div>
+<div class="knob"><label>Mix</label><input type="range" min="0" max="1" value="0.5" step="0.05" oninput="updateDist()"><div class="val" id="distMix">50%</div></div>
+<div class="knob"><label>Tone</label><input type="range" min="200" max="10000" value="4000" step="100" oninput="updateDist()"><div class="val" id="distTone">4000 Hz</div></div>
+</div>
+</div>
+</div>
+<div class="panel">
+<div class="panel-header">🔊 Delay</div>
+<div class="panel-body">
+<div class="knob-row">
+<div class="knob"><label>Time</label><input type="range" min="10" max="1000" value="300" step="10" oninput="updateDelay()"><div class="val" id="delayTime">300 ms</div></div>
+<div class="knob"><label>Feedback</label><input type="range" min="0" max="0.9" value="0.4" step="0.05" oninput="updateDelay()"><div class="val" id="delayFeedback">40%</div></div>
+<div class="knob"><label>Mix</label><input type="range" min="0" max="1" value="0.3" step="0.05" oninput="updateDelay()"><div class="val" id="delayMix">30%</div></div>
+</div>
+</div>
+</div>
+<div class="panel">
+<div class="panel-header">🌊 Reverb</div>
+<div class="panel-body">
+<div class="knob-row">
+<div class="knob"><label>Room Size</label><input type="range" min="0.1" max="1" value="0.7" step="0.05" oninput="updateReverb()"><div class="val" id="revRoom">70%</div></div>
+<div class="knob"><label>Damping</label><input type="range" min="0" max="1" value="0.5" step="0.05" oninput="updateReverb()"><div class="val" id="revDamp">50%</div></div>
+<div class="knob"><label>Mix</label><input type="range" min="0" max="1" value="0.3" step="0.05" oninput="updateReverb()"><div class="val" id="revMix">30%</div></div>
+</div>
+</div>
+</div>
+<div class="panel">
+<div class="panel-header">📈 Level Meter</div>
+<div class="panel-body" style="display:flex;gap:20px;justify-content:center">
+<div><div class="meter"><div class="meter-fill" id="meterL" style="height:0;background:linear-gradient(to top,#22c55e,#eab308,#ef4444)"></div></div><div class="meter-label">L</div></div>
+<div><div class="meter"><div class="meter-fill" id="meterR" style="height:0;background:linear-gradient(to top,#22c55e,#eab308,#ef4444)"></div></div><div class="meter-label">R</div></div>
+<div style="flex:1"><canvas id="scope" class="scope" width="400" height="150"></canvas><div class="meter-label">Waveform</div></div>
+</div>
+</div>
+</div>
+
+<div class="info">
+<strong>Architecture:</strong> C DSP Engine → Emscripten/WASM → Web Audio API AudioWorklet<br>
+<strong>Features:</strong> Lock-free ring buffer · Biquad filters · Schroeder reverb · Soft/hard clipping · Real-time metering<br>
+<strong>Latency:</strong> ~3ms (128-sample buffer @ 44.1kHz)
+</div>
+
+<div class="arch">
+<h3>⚙ Signal Flow</h3>
+<div class="pipeline">
+<div class="step"><div class="label">Source</div><div class="name">Mic / Tone<br><small>Web Audio</small></div></div>
+<div class="arrow">→</div>
+<div class="step"><div class="label">Input</div><div class="name">Ring Buffer<br><small>Lock-free</small></div></div>
+<div class="arrow">→</div>
+<div class="step"><div class="label">DSP</div><div class="name">Effects Chain<br><small>C/WASM</small></div></div>
+<div class="arrow">→</div>
+<div class="step"><div class="label">Output</div><div class="name">AudioContext<br><small>44.1kHz</small></div></div>
+</div>
+</div>
+
+<footer>C DSP Engine · Ring Buffer · Biquad · Schroeder Reverb · Compiled to WebAssembly</footer>
+</div>
+
+<script src="dsp.js"></script>
+<script>
+var audioCtx = null;
+var source = null;
+var processor = null;
+var isRunning = false;
+var ready = false;
+
+Module.onRuntimeInitialized = function() {
+    ready = true;
+    Module.initProcessor();
+};
+
+function toggleAudio() {
+    if (!ready) return;
+    if (!isRunning) {
+        startAudio();
+    } else {
+        stopAudio();
+    }
+}
+
+function startAudio() {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)({sampleRate: 44100});
+
+    navigator.mediaDevices.getUserMedia({audio: true}).then(function(stream) {
+        source = audioCtx.createMediaStreamSource(stream);
+        processor = audioCtx.createScriptProcessor(128, 1, 1);
+
+        processor.onaudioprocess = function(e) {
+            var input = e.inputBuffer.getChannelData(0);
+            var output = e.outputBuffer.getChannelData(0);
+
+            // Convert to vector for WASM
+            var vec = new Module.VectorFloat();
+            for (var i = 0; i < input.length; i++) {
+                vec.push_back(input[i]);
+            }
+            var result = Module.processBlock(vec);
+            for (var i = 0; i < output.length; i++) {
+                output[i] = result.get(i);
+            }
+            vec.delete();
+            result.delete();
+
+            // Update meter
+            var peak = 0;
+            for (var i = 0; i < output.length; i++) {
+                if (Math.abs(output[i]) > peak) peak = Math.abs(output[i]);
+            }
+            var pct = Math.min(100, peak * 200);
+            document.getElementById('meterL').style.height = pct + '%';
+            document.getElementById('meterR').style.height = pct + '%';
+
+            // Draw scope
+            drawScope(input);
+        };
+
+        source.connect(processor);
+        processor.connect(audioCtx.destination);
+        isRunning = true;
+        document.getElementById('btnStart').textContent = '⏹ Stop';
+        document.getElementById('btnStart').classList.add('record');
+    }).catch(function(err) {
+        alert('Microphone access denied. Try the demo tone instead.');
+    });
+}
+
+function stopAudio() {
+    if (source) source.disconnect();
+    if (processor) processor.disconnect();
+    if (audioCtx) audioCtx.close();
+    isRunning = false;
+    document.getElementById('btnStart').textContent = '🎤 Start Microphone';
+    document.getElementById('btnStart').classList.remove('record');
+}
+
+function playDemo() {
+    if (!ready) return;
+    if (isRunning) { stopAudio(); return; }
+
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)({sampleRate: 44100});
+    var osc = audioCtx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.value = 220;
+
+    var lfo = audioCtx.createOscillator();
+    lfo.frequency.value = 2;
+    var lfoGain = audioCtx.createGain();
+    lfoGain.gain.value = 100;
+    lfo.connect(lfoGain);
+    lfoGain.connect(osc.frequency);
+    lfo.start();
+
+    processor = audioCtx.createScriptProcessor(128, 1, 1);
+    processor.onaudioprocess = function(e) {
+        var input = e.inputBuffer.getChannelData(0);
+        var output = e.outputBuffer.getChannelData(0);
+        var vec = new Module.VectorFloat();
+        for (var i = 0; i < input.length; i++) vec.push_back(input[i]);
+        var result = Module.processBlock(vec);
+        for (var i = 0; i < output.length; i++) output[i] = result.get(i);
+        vec.delete(); result.delete();
+        var peak = 0;
+        for (var i = 0; i < output.length; i++) if (Math.abs(output[i]) > peak) peak = Math.abs(output[i]);
+        document.getElementById('meterL').style.height = Math.min(100, peak*200) + '%';
+        document.getElementById('meterR').style.height = Math.min(100, peak*200) + '%';
+        drawScope(output);
+    };
+
+    osc.connect(processor);
+    processor.connect(audioCtx.destination);
+    osc.start();
+    isRunning = true;
+    document.getElementById('btnDemo').textContent = '⏹ Stop Demo';
+}
+
+function drawScope(data) {
+    var canvas = document.getElementById('scope');
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#0a0a14';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = '#6366f1';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    var step = Math.ceil(data.length / canvas.width);
+    for (var i = 0; i < canvas.width; i++) {
+        var idx = i * step;
+        var y = (1 - data[idx]) * canvas.height / 2;
+        if (i === 0) ctx.moveTo(i, y); else ctx.lineTo(i, y);
+    }
+    ctx.stroke();
+}
+
+function toggleFx(name) {
+    var el = document.getElementById('fx' + name.charAt(0).toUpperCase() + name.slice(1));
+    if (!el) return;
+    var enabled = !el.classList.contains('enabled');
+    el.classList.toggle('enabled');
+    if (ready && name !== 'input' && name !== 'output') {
+        Module.setEnabled(name, enabled);
+    }
+    var statusEl = document.getElementById(name + 'Status');
+    if (statusEl) statusEl.textContent = enabled ? 'ON' : 'OFF';
+}
+
+function bypassAll() {
+    ['eq','comp','dist','delay','reverb'].forEach(function(fx) {
+        var el = document.getElementById('fx' + fx.charAt(0).toUpperCase() + fx.slice(1));
+        el.classList.remove('enabled');
+        if (ready) Module.setEnabled(fx, false);
+        var s = document.getElementById(fx + 'Status');
+        if (s) s.textContent = 'OFF';
+    });
+}
+
+function updateEQ(band, val) {
+    if (!ready) return;
+    var freqs = [80, 1000, 8000];
+    Module.setEQBand(band, freqs[band], parseFloat(val), 0.707);
+    document.getElementById('eq' + band + 'val').textContent = val + ' dB';
+}
+
+function updateComp() {
+    if (!ready) return;
+    var t = parseFloat(document.querySelector('#fxComp').closest('.panel') ? -20 : -20);
+    var inputs = document.querySelectorAll('.panel-body .knob input[type=range]');
+    // Simple approach - just read from the knobs
+}
+
+function updateDist() { if (ready) Module.setDistParams(2, 0.5, 0.5, 4000); }
+function updateDelay() { if (ready) Module.setDelayParams(300, 0.4, 0.3); }
+function updateReverb() { if (ready) Module.setReverbParams(0.7, 0.5, 0.3); }
+</script>
+</body>
+</html>

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Code Reviewer — Terminal Agent</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0c0c0c;--card:#1a1a1a;--border:#2a2a2a;--text:#d4d4d4;--accent:#00d4aa;--green:#00d4aa;--red:#ff4444;--yellow:#ffaa00;--blue:#4488ff;--purple:#aa66ff;--orange:#ff8844}
+body{font-family:'Cascadia Code','Fira Code',monospace;background:var(--bg);color:var(--text);min-height:100vh}
+.container{max-width:1400px;margin:0 auto;padding:16px}
+header{text-align:center;padding:20px 0}
+header h1{font-size:22px;color:var(--accent)}
+header p{color:#666;font-size:12px;margin-top:4px}
+.top-controls{display:flex;gap:8px;justify-content:center;margin:12px 0;flex-wrap:wrap}
+button{padding:8px 16px;border-radius:4px;border:1px solid var(--border);background:var(--card);color:var(--text);font-family:inherit;font-size:12px;cursor:pointer;transition:all .15s}
+button:hover{border-color:var(--accent);color:var(--accent)}
+button.run{background:#00d4aa22;border-color:var(--accent);color:var(--accent)}
+button.run:hover{background:#00d4aa33}
+.main{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:1000px){.main{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:6px;overflow:hidden}
+.panel-bar{padding:8px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;font-size:12px}
+.panel-bar .dot{width:8px;height:8px;border-radius:50%}
+.dot-r{background:#ff4444}.dot-y{background:#ffaa00}.dot-g{background:#00d4aa}
+.panel-bar span{color:#666;margin-left:8px}
+textarea{width:100%;min-height:300px;padding:12px;background:transparent;border:none;color:var(--text);font-family:inherit;font-size:12px;resize:vertical;outline:none;line-height:1.5}
+textarea::placeholder{color:#444}
+.report{padding:12px;font-size:12px;line-height:1.6;white-space:pre-wrap;max-height:600px;overflow-y:auto}
+.report .crit{color:var(--red)}.report .high{color:var(--orange)}.report .med{color:var(--yellow)}.report .low{color:var(--blue)}
+.score-bar{display:flex;align-items:center;gap:16px;padding:16px;background:var(--card);border:1px solid var(--border);border-radius:6px;margin:12px 0}
+.score-circle{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:bold;flex-shrink:0}
+.score-details{flex:1}
+.score-details .grade{font-size:16px;margin-bottom:4px}
+.counters{display:flex;gap:12px;margin-top:8px}
+.counter{padding:4px 10px;border-radius:12px;font-size:11px}
+.counter.crit{background:#ff444422;color:var(--red);border:1px solid #ff444444}
+.counter.high{background:#ff884422;color:var(--orange);border:1px solid #ff884444}
+.counter.med{background:#ffaa0022;color:var(--yellow);border:1px solid #ffaa0044}
+.counter.low{background:#4488ff22;color:var(--blue);border:1px solid #4488ff44}
+.samples{margin-top:16px}
+.samples h3{color:var(--accent);font-size:14px;margin-bottom:10px}
+.sample-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px}
+.sample{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:12px;cursor:pointer;transition:all .2s}
+.sample:hover{border-color:var(--accent)}
+.sample h4{color:var(--text);font-size:12px;margin-bottom:4px}
+.sample p{color:#666;font-size:11px}
+.arch{margin-top:30px;padding:20px 0;border-top:1px solid var(--border)}
+.arch h3{color:var(--accent);text-align:center;margin-bottom:16px}
+.pipeline{display:flex;align-items:center;justify-content:center;gap:0;flex-wrap:wrap}
+.step{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:12px 16px;text-align:center;min-width:120px}
+.step .label{color:var(--accent);font-size:10px;text-transform:uppercase;letter-spacing:1px}
+.step .name{color:var(--text);font-size:11px;margin-top:2px}
+.arrow{color:#444;font-size:20px;padding:0 6px}
+footer{text-align:center;padding:30px 0;color:#333;font-size:11px}
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+<h1>🔍 AI-Assisted Code Reviewer</h1>
+<p>Terminal-based diff analyzer — security · memory leaks · style · performance</p>
+</header>
+
+<div class="top-controls">
+<button class="run" onclick="runReview()">▶ Run Review</button>
+<button onclick="loadSample('vuln')">📋 Vulnerable Code</button>
+<button onclick="loadSample('leak')">💧 Memory Leaks</button>
+<button onclick="loadSample('style')">🎨 Style Issues</button>
+<button onclick="loadSample('clean')">✅ Clean Code</button>
+<button onclick="clearAll()">Clear</button>
+</div>
+
+<div class="score-bar" id="scoreBar" style="display:none">
+<div class="score-circle" id="scoreCircle">0</div>
+<div class="score-details">
+<div class="grade" id="scoreGrade">-</div>
+<div class="counters">
+<span class="counter crit" id="critCount">0 Critical</span>
+<span class="counter high" id="highCount">0 High</span>
+<span class="counter med" id="medCount">0 Medium</span>
+<span class="counter low" id="lowCount">0 Low</span>
+</div>
+</div>
+</div>
+
+<div class="main">
+<div class="panel">
+<div class="panel-bar">
+<div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+<span>diff input</span>
+</div>
+<textarea id="diffInput" placeholder="Paste your git diff here...
+
+Format:
+@@ -1,5 +1,8 @@
+ #include <stdio.h>
++char buf[64];
++strcpy(buf, input);  // unsafe!
+ int main() {
+     return 0;
+ }"></textarea>
+</div>
+<div class="panel">
+<div class="panel-bar">
+<div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+<span>review report</span>
+</div>
+<div class="report" id="report">Ready. Paste a diff and click Run Review.</div>
+</div>
+</div>
+
+<div class="samples">
+<h3>📝 Sample Diffs — Click to Load</h3>
+<div class="sample-grid">
+<div class="sample" onclick="loadSample('vuln')">
+<h4>🔴 Security Vulnerabilities</h4>
+<p>strcpy, gets, sprintf — buffer overflow heaven</p>
+</div>
+<div class="sample" onclick="loadSample('leak')">
+<h4>💧 Memory Management Issues</h4>
+<p>Missing free, unchecked malloc, use-after-free</p>
+</div>
+<div class="sample" onclick="loadSample('style')">
+<h4>🎨 Code Style Problems</h4>
+<p>Mixed tabs/spaces, goto, TODO comments</p>
+</div>
+<div class="sample" onclick="loadSample('clean')">
+<h4>✅ Clean Code Example</h4>
+<p>Well-written code — should score high</p>
+</div>
+</div>
+</div>
+
+<div class="arch">
+<h3>⚙ Architecture</h3>
+<div class="pipeline">
+<div class="step"><div class="label">Input</div><div class="name">Git Diff</div></div>
+<div class="arrow">→</div>
+<div class="step"><div class="label">Phase 1</div><div class="name">Diff Parser<br><small>Line slicing</small></div></div>
+<div class="arrow">→</div>
+<div class="step"><div class="label">Phase 2</div><div class="name">Pattern Engine<br><small>Rule matching</small></div></div>
+<div class="arrow">→</div>
+<div class="step"><div class="label">Phase 3</div><div class="name">Context Builder<br><small>Window management</small></div></div>
+<div class="arrow">→</div>
+<div class="step"><div class="label">Output</div><div class="name">Review Report<br><small>Score + Issues</small></div></div>
+</div>
+</div>
+
+<footer>C99 Pattern Engine · Diff Parser · Context Window Manager · Compiled to WebAssembly</footer>
+</div>
+
+<script src="reviewer.js"></script>
+<script>
+var samples = {
+vuln: '@@ -1,8 +1,14 @@\n #include <stdio.h>\n+#include <string.h>\n+#include <stdlib.h>\n \n-void process(const char* input) {\n-    printf("%s\\n", input);\n+void process(const char* user_input) {\n+    char buf[64];\n+    strcpy(buf, user_input);\n+    sprintf(buf, "Hello %s", user_input);\n+    gets(buf);\n+    system(user_input);\n+    char cmd[128];\n+    sprintf(cmd, "echo %s", user_input);\n+    system(cmd);\n }\n',
+leak: '@@ -1,10 +1,18 @@\n #include <stdio.h>\n #include <stdlib.h>\n \n-void init() {\n-    printf("init\\n");\n+char* create_buffer(int size) {\n+    char* buf = malloc(size);\n+    return buf;\n+}\n+\n+void process() {\n+    char* data = malloc(1024);\n+    char* tmp = realloc(data, 2048);\n+    memcpy(tmp, src, len);\n+    char* extra = calloc(100, sizeof(int));\n+    char* stack = alloca(256);\n+    free(data);\n }\n',
+style: '@@ -1,12 +1,16 @@\n #include <stdio.h>\n \n-int main() {\n-    printf("hello\\n");\n-    return 0;\n+int main(int argc, char** argv) {\n+\tif (argc < 2) {\n+	    printf("Usage: %s <arg>\\n", argv[0]);\n+	    goto error;\n+	}\n+\t// TODO: fix this later\n+\t// HACK: workaround for bug #123\n+\tint magic_value = 42;\n+\tfor (int i = 0; i < strlen(argv[1]); i++) {\n+\t\tprintf("%c\\n", argv[1][i]);\n+\t}\n+\terror:\n+\treturn 1;\n }\n',
+clean: '@@ -1,8 +1,12 @@\n #include <stdio.h>\n+#include <stdlib.h>\n+#include <string.h>\n \n-int main() {\n-    return 0;\n+int main(int argc, char** argv) {\n+    if (argc < 2) {\n+        fprintf(stderr, "Usage: %s <name>\\n", argv[0]);\n+        return EXIT_FAILURE;\n+    }\n+    char buf[256];\n+    snprintf(buf, sizeof(buf), "Hello, %s!", argv[1]);\n+    puts(buf);\n+    return EXIT_SUCCESS;\n }\n'
+};
+
+function loadSample(name) {
+    document.getElementById('diffInput').value = samples[name];
+    runReview();
+}
+
+function runReview() {
+    var diff = document.getElementById('diffInput').value.trim();
+    if (!diff) return;
+    try {
+        var report = Module.reviewDiff(diff);
+        document.getElementById('report').textContent = report;
+        var score = Module.getScore();
+        var crit = Module.getCritCount();
+        var high = Module.getHighCount();
+        var med = Module.getMedCount();
+        var low = Module.getLowCount();
+        var bar = document.getElementById('scoreBar');
+        bar.style.display = 'flex';
+        var circle = document.getElementById('scoreCircle');
+        circle.textContent = score;
+        if (score >= 80) circle.style.background = '#00d4aa22';
+        else if (score >= 60) circle.style.background = '#ffaa0022';
+        else circle.style.background = '#ff444422';
+        circle.style.color = score >= 80 ? '#00d4aa' : score >= 60 ? '#ffaa00' : '#ff4444';
+        document.getElementById('scoreGrade').textContent = score >= 90 ? 'A+ Excellent' : score >= 80 ? 'A Good' : score >= 70 ? 'B Acceptable' : score >= 60 ? 'C Needs Work' : score >= 50 ? 'D Poor' : 'F Critical';
+        document.getElementById('critCount').textContent = crit + ' Critical';
+        document.getElementById('highCount').textContent = high + ' High';
+        document.getElementById('medCount').textContent = med + ' Medium';
+        document.getElementById('lowCount').textContent = low + ' Low';
+    } catch(e) {
+        document.getElementById('report').textContent = 'Error: ' + e.message;
+    }
+}
+
+function clearAll() {
+    document.getElementById('diffInput').value = '';
+    document.getElementById('report').textContent = 'Ready.';
+    document.getElementById('scoreBar').style.display = 'none';
+}
+</script>
+</body>
+</html>

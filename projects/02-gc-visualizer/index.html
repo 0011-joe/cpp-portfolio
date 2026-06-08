@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GC Visualizer — Mark-Sweep Debugger</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a0f;--card:#12121a;--border:#1e1e2e;--text:#e0e0e0;--accent:#7c3aed;--green:#22c55e;--red:#ef4444;--yellow:#eab308;--blue:#3b82f6;--orange:#f97316;--gray:#6b7280}
+body{font-family:'Cascadia Code','Fira Code',monospace;background:var(--bg);color:var(--text);min-height:100vh}
+.container{max-width:1400px;margin:0 auto;padding:16px}
+header{text-align:center;padding:24px 0 16px}
+header h1{font-size:24px;background:linear-gradient(135deg,#7c3aed,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+header p{color:#6b7280;font-size:12px;margin-top:4px}
+.top-bar{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin:16px 0}
+button{padding:8px 16px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--text);font-family:inherit;font-size:12px;cursor:pointer;transition:all .2s}
+button:hover{border-color:var(--accent);color:var(--accent)}
+button.danger{border-color:#ef444444;color:var(--red)}
+button.danger:hover{background:#ef444422}
+button.success{border-color:#22c55e44;color:var(--green)}
+button.success:hover{background:#22c55e22}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+button.primary:hover{background:#6d28d9}
+.main{display:grid;grid-template-columns:1fr 320px;gap:16px}
+@media(max-width:900px){.main{grid-template-columns:1fr}}
+.heap-viz{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:16px;min-height:400px}
+.heap-title{color:var(--accent);font-size:14px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.heap-grid{display:grid;grid-template-columns:repeat(16,1fr);gap:3px}
+.cell{aspect-ratio:1;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:bold;transition:all .3s;position:relative}
+.cell.free{background:#1a1a2e;border:1px solid #2a2a3e}
+.cell.white{background:#374151;border:1px solid #4b5563}
+.cell.gray{background:#f59e0b;border:1px solid #fbbf24;color:#000}
+.cell.black{background:#22c55e;border:1px solid #4ade80;color:#000}
+.cell.swept{background:#ef4444;border:1px solid #f87171;animation:sweepFlash .5s}
+@keyframes sweepFlash{0%{transform:scale(1.2)}100%{transform:scale(1)}}
+.cell .tooltip{display:none;position:absolute;bottom:110%;left:50%;transform:translateX(-50%);background:#1e1e2e;border:1px solid var(--border);padding:8px;border-radius:6px;font-size:10px;white-space:nowrap;z-index:10;pointer-events:none}
+.cell:hover .tooltip{display:block}
+.legend{display:flex;gap:16px;margin:16px 0;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:#9ca3af}
+.legend-dot{width:14px;height:14px;border-radius:3px}
+.right-panel{display:flex;flex-direction:column;gap:12px}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.panel-header{padding:10px 14px;border-bottom:1px solid var(--border);font-size:12px;color:var(--accent);display:flex;align-items:center;gap:6px}
+.panel-body{padding:12px;font-size:12px;max-height:200px;overflow-y:auto}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat{background:#0a0a0f;border-radius:6px;padding:10px;text-align:center}
+.stat .val{font-size:20px;color:var(--accent);font-weight:bold}
+.stat .label{font-size:10px;color:#6b7280;margin-top:2px}
+.log-line{padding:2px 0;border-bottom:1px solid #1a1a2e;font-size:11px;line-height:1.5}
+.log-line.alloc{color:var(--green)}
+.log-line.sweep{color:var(--red)}
+.log-line.mark{color:var(--yellow)}
+.log-line.info{color:var(--blue)}
+.obj-list{display:flex;flex-direction:column;gap:4px}
+.obj-item{display:flex;align-items:center;gap:8px;padding:6px 8px;background:#0a0a0f;border-radius:4px;font-size:11px}
+.obj-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.obj-item .id{color:var(--accent);width:24px}
+.obj-item .type{color:#9ca3af;flex:1}
+.obj-item .status{font-size:10px}
+.root-badge{background:#22c55e22;color:var(--green);padding:1px 6px;border-radius:8px;font-size:9px}
+.scenarios{margin-top:16px}
+.scenarios h3{color:var(--accent);font-size:14px;margin-bottom:12px}
+.scenario-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+.scenario{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px;cursor:pointer;transition:all .2s}
+.scenario:hover{border-color:var(--accent);transform:translateY(-2px)}
+.scenario h4{color:var(--text);font-size:13px;margin-bottom:4px}
+.scenario p{color:#6b7280;font-size:11px}
+footer{text-align:center;padding:30px 0;color:#374151;font-size:11px}
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+<h1>♻ Mark-Sweep GC Visualizer</h1>
+<p>Interactive garbage collector debugger — watch allocation, marking, and sweeping in real time</p>
+</header>
+
+<div class="top-bar">
+<button class="success" onclick="demoBasic()">📦 Basic Demo</button>
+<button class="success" onclick="demoCycle()">🔄 Cycle Demo</button>
+<button class="success" onclick="demoLeak()">💧 Leak Demo</button>
+<button class="danger" onclick="doGC()">🗑 Run GC</button>
+<button onclick="doReset()">↺ Reset</button>
+</div>
+
+<div class="main">
+<div>
+<div class="heap-viz">
+<div class="heap-title">📊 Heap Memory Map <span style="color:#6b7280;font-size:11px" id="heapInfo">0/256 bytes</span></div>
+<div class="heap-grid" id="heapGrid"></div>
+<div class="legend">
+<div class="legend-item"><div class="legend-dot" style="background:#374151"></div>White (unmarked)</div>
+<div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div>Gray (pending)</div>
+<div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div>Black (marked)</div>
+<div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div>Swept (freed)</div>
+<div class="legend-item"><div class="legend-dot" style="background:#1a1a2e"></div>Free</div>
+</div>
+</div>
+
+<div class="scenarios">
+<h3>🧪 Scenarios — Click to Load</h3>
+<div class="scenario-grid">
+<div class="scenario" onclick="demoBasic()">
+<h4>📦 Basic Allocation</h4>
+<p>Create rooted objects, run GC, see them survive</p>
+</div>
+<div class="scenario" onclick="demoCycle()">
+<h4>🔄 Circular References</h4>
+<p>A↔B cycle with no roots — GC collects both</p>
+</div>
+<div class="scenario" onclick="demoLeak()">
+<h4>💾 Memory Pressure</h4>
+<p>Allocate until threshold, watch GC trigger</p>
+</div>
+<div class="scenario" onclick="demoTree()">
+<h4>🌳 Object Tree</h4>
+<p>Tree structure with partial unrooting</p>
+</div>
+</div>
+</div>
+</div>
+
+<div class="right-panel">
+<div class="panel">
+<div class="panel-header">📈 Statistics</div>
+<div class="panel-body">
+<div class="stat-grid">
+<div class="stat"><div class="val" id="statObjects">0</div><div class="label">Objects</div></div>
+<div class="stat"><div class="val" id="statHeap">0</div><div class="label">Heap Used</div></div>
+<div class="stat"><div class="val" id="statAlloc">0</div><div class="label">Allocated</div></div>
+<div class="stat"><div class="val" id="statFreed">0</div><div class="label">Freed</div></div>
+<div class="stat"><div class="val" id="statGC">0</div><div class="label">GC Cycles</div></div>
+<div class="stat"><div class="val" id="statGen">0</div><div class="label">Generation</div></div>
+</div>
+</div>
+</div>
+
+<div class="panel">
+<div class="panel-header">📋 Objects</div>
+<div class="panel-body obj-list" id="objList">No objects yet</div>
+</div>
+
+<div class="panel">
+<div class="panel-header">📝 Event Log</div>
+<div class="panel-body" id="logPanel" style="max-height:300px">Ready.</div>
+</div>
+</div>
+</div>
+
+<footer>Written in C · Mark-Sweep GC · Compiled to WebAssembly via Emscripten</footer>
+</div>
+
+<script src="gc.js"></script>
+<script>
+var ready = false;
+Module.onRuntimeInitialized = function() { ready = true; refresh(); };
+
+function refresh() {
+    if (!ready) return;
+    try {
+        var state = JSON.parse(Module.getHeapState());
+        renderHeap(state);
+        renderStats(state.stats);
+        renderObjects(state);
+        renderLog();
+    } catch(e) {}
+}
+
+function renderHeap(state) {
+    var grid = document.getElementById('heapGrid');
+    grid.innerHTML = '';
+    var cells = new Array(256).fill(null);
+    state.objects.forEach(function(obj) {
+        if (obj.alive) {
+            for (var i = obj.offset; i < Math.min(obj.offset + obj.size, 256); i++) {
+                cells[i] = obj;
+            }
+        }
+    });
+    for (var i = 0; i < 256; i++) {
+        var div = document.createElement('div');
+        var obj = cells[i];
+        if (!obj) {
+            div.className = 'cell free';
+        } else {
+            var colorClass = ['white','gray','black'][obj.color] || 'white';
+            div.className = 'cell ' + colorClass;
+            if (obj.offset === i) div.textContent = obj.id;
+        }
+        grid.appendChild(div);
+    }
+    document.getElementById('heapInfo').textContent = state.stats.heap_used + '/' + state.stats.heap_total + ' bytes';
+}
+
+function renderStats(stats) {
+    document.getElementById('statObjects').textContent = stats.num_objects;
+    document.getElementById('statHeap').textContent = stats.heap_used;
+    document.getElementById('statAlloc').textContent = stats.total_allocated;
+    document.getElementById('statFreed').textContent = stats.total_freed;
+    document.getElementById('statGC').textContent = stats.gc_count;
+    document.getElementById('statGen').textContent = stats.generation;
+}
+
+function renderObjects(state) {
+    var list = document.getElementById('objList');
+    var alive = state.objects.filter(function(o){return o.alive});
+    if (alive.length === 0) { list.innerHTML = 'No objects'; return; }
+    list.innerHTML = '';
+    var rootIds = new Set(state.roots);
+    alive.forEach(function(obj) {
+        var div = document.createElement('div');
+        div.className = 'obj-item';
+        var colorMap = {0:'#374151',1:'#f59e0b',2:'#22c55e'};
+        var typeMap = {0:'INT',1:'PAIR',2:'ARRAY',3:'STRING'};
+        var val = typeof obj.value === 'string' ? obj.value : obj.value;
+        div.innerHTML = '<div class="obj-dot" style="background:'+(colorMap[obj.color]||'#374151')+'"></div>' +
+            '<span class="id">#'+obj.id+'</span>' +
+            '<span class="type">'+typeMap[obj.type]+' '+val+'</span>' +
+            (rootIds.has(obj.id) ? '<span class="root-badge">ROOT</span>' : '');
+        list.appendChild(div);
+    });
+}
+
+function renderLog() {
+    var log = Module.getLog();
+    var panel = document.getElementById('logPanel');
+    var lines = log.split('\n').filter(function(l){return l.trim()});
+    panel.innerHTML = '';
+    lines.forEach(function(line) {
+        var div = document.createElement('div');
+        div.className = 'log-line';
+        if (line.includes('+')) div.className += ' alloc';
+        else if (line.includes('Swept') || line.includes('✕')) div.className += ' sweep';
+        else if (line.includes('gray') || line.includes('black') || line.includes('Mark')) div.className += ' mark';
+        else div.className += ' info';
+        div.textContent = line;
+        panel.appendChild(div);
+    });
+    panel.scrollTop = panel.scrollHeight;
+}
+
+function demoBasic() {
+    if (!ready) return;
+    Module.resetHeap();
+    var a = Module.createInt(42);
+    var b = Module.createInt(100);
+    var c = Module.createPair(a, b);
+    Module.addRoot(c);
+    Module.createInt(999); // unreachable
+    Module.createString("hello");
+    refresh();
+}
+
+function demoCycle() {
+    if (!ready) return;
+    Module.resetHeap();
+    var a = Module.createInt(1);
+    var b = Module.createInt(2);
+    var pa = Module.createPair(a, b);
+    var pb = Module.createPair(b, a);
+    // Create cycle but don't root either
+    Module.createString("unreachable cycle");
+    refresh();
+}
+
+function demoLeak() {
+    if (!ready) return;
+    Module.resetHeap();
+    for (var i = 0; i < 20; i++) {
+        Module.createInt(i * 10);
+    }
+    Module.addRoot(1);
+    refresh();
+}
+
+function demoTree() {
+    if (!ready) return;
+    Module.resetHeap();
+    var root = Module.createString("root");
+    var c1 = Module.createInt(10);
+    var c2 = Module.createInt(20);
+    var c3 = Module.createInt(30);
+    var arr = Module.createArray(3);
+    Module.setArrayElement(arr, 0, c1);
+    Module.setArrayElement(arr, 1, c2);
+    Module.setArrayElement(arr, 2, c3);
+    var pair = Module.createPair(root, arr);
+    Module.addRoot(pair);
+    Module.createInt(999); // garbage
+    Module.createString("garbage");
+    refresh();
+}
+
+function doGC() {
+    if (!ready) return;
+    Module.runGC();
+    refresh();
+}
+
+function doReset() {
+    if (!ready) return;
+    Module.resetHeap();
+    refresh();
+}
+</script>
+</body>
+</html>
